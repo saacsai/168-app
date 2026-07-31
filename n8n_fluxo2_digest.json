@@ -1,0 +1,270 @@
+{
+  "name": "Fluxo 2 — Digest Cron",
+  "nodes": [
+    {
+      "id": "cron-001",
+      "name": "Cron 30min",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [180, 300],
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 30 }]
+        }
+      }
+    },
+    {
+      "id": "code-time-001",
+      "name": "Horário SP",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [380, 300],
+      "parameters": {
+        "jsCode": "const now = new Date();\nconst timeStr = new Intl.DateTimeFormat('pt-BR', {\n  timeZone: 'America/Sao_Paulo',\n  hour: '2-digit',\n  minute: '2-digit',\n  hour12: false\n}).format(now);\n\nconst [h, m] = timeStr.split(':').map(Number);\nlet rh = h, rm;\nif (m < 15) { rm = '00'; }\nelse if (m < 45) { rm = '30'; }\nelse { rm = '00'; rh = (h + 1) % 24; }\n\nconst currentTime = String(rh).padStart(2, '0') + ':' + rm;\nconst supabaseFilter = 'cs.{' + currentTime + '}';\n\nreturn [{ json: { currentTime, supabaseFilter } }];"
+      }
+    },
+    {
+      "id": "http-agend-001",
+      "name": "Buscar Agendamentos",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [580, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/digest_schedule",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "window_times", "value": "={{ $json.supabaseFilter }}" },
+            { "name": "active", "value": "eq.true" },
+            { "name": "select", "value": "instance_id" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "split-001",
+      "name": "Loop Instâncias",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [780, 300],
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      }
+    },
+    {
+      "id": "http-inst-001",
+      "name": "Buscar Instância e Mensagens",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [980, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/instances",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "id", "value": "=eq.{{ $json.instance_id }}" },
+            { "name": "select", "value": "id,instance_name,phone_number,persona_name,user_id,message_queue(id,contact_remote_jid,contact_name,contact_priority,original_message,received_at)" },
+            { "name": "message_queue.included_in_digest", "value": "eq.false" },
+            { "name": "message_queue.order", "value": "received_at.asc" },
+            { "name": "message_queue.limit", "value": "50" }
+          ]
+        },
+        "options": {}
+      }
+    },
+    {
+      "id": "code-verify-001",
+      "name": "Verificar Mensagens",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1180, 300],
+      "parameters": {
+        "jsCode": "const inst = $input.item.json;\nconst messages = inst.message_queue || [];\n\nconst priority = messages.filter(m => m.contact_priority === 'priority');\nconst normal   = messages.filter(m => m.contact_priority !== 'priority' && m.contact_priority !== 'silenced');\nconst silenced = messages.filter(m => m.contact_priority === 'silenced');\n\nreturn [{\n  json: {\n    hasMessages:      messages.length > 0,\n    totalMessages:    messages.length,\n    priorityCount:    priority.length,\n    normalCount:      normal.length,\n    silencedCount:    silenced.length,\n    priorityMessages: priority,\n    normalMessages:   normal,\n    silencedMessages: silenced,\n    messageIds:       messages.map(m => m.id),\n    instanceId:       inst.id,\n    instanceName:     inst.instance_name,\n    phoneNumber:      inst.phone_number,\n    personaName:      inst.persona_name || 'Assistente',\n    userId:           inst.user_id\n  }\n}];"
+      }
+    },
+    {
+      "id": "if-msgs-001",
+      "name": "Tem Mensagens?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1380, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict" },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.totalMessages }}",
+              "rightValue": 0,
+              "operator": { "type": "number", "operation": "gt" }
+            }
+          ],
+          "combinator": "and"
+        }
+      }
+    },
+    {
+      "id": "code-prompt-001",
+      "name": "Montar Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1380, 520],
+      "parameters": {
+        "jsCode": "const d = $input.item.json;\nconst now = new Date().toLocaleString('pt-BR', {\n  timeZone: 'America/Sao_Paulo',\n  hour: '2-digit',\n  minute: '2-digit'\n});\n\nlet msgList = '';\n\nif (d.priorityMessages.length > 0) {\n  msgList += `📌 PRIORITÁRIOS (${d.priorityMessages.length}):\\n`;\n  d.priorityMessages.forEach(m => {\n    const nome = m.contact_name || m.contact_remote_jid;\n    const txt  = (m.original_message || '[sem texto]').slice(0, 200);\n    msgList += `• ${nome}: ${txt}\\n`;\n  });\n  msgList += '\\n';\n}\n\nif (d.normalMessages.length > 0) {\n  msgList += `💬 NORMAIS (${d.normalMessages.length}):\\n`;\n  d.normalMessages.forEach(m => {\n    const nome = m.contact_name || m.contact_remote_jid;\n    const txt  = (m.original_message || '[sem texto]').slice(0, 120);\n    msgList += `• ${nome}: ${txt}\\n`;\n  });\n  msgList += '\\n';\n}\n\nif (d.silencedMessages.length > 0) {\n  msgList += `🔇 SILENCIADOS: ${d.silencedMessages.length} mensagem(ns) ignorada(s).\\n`;\n}\n\nconst userMsg = `São ${now} em São Paulo.\\n\\nMensagens WhatsApp recebidas (${d.totalMessages} no total):\\n\\n${msgList}\\nGere o resumo compacto.`;\n\nreturn [{ json: { ...d, userMsg, currentTime: now } }];"
+      }
+    },
+    {
+      "id": "http-gemini-001",
+      "name": "Gemini Resumo",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1580, 520],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={{ $env.GEMINI_API_KEY }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={\n  \"system_instruction\": {\n    \"parts\": [{\n      \"text\": \"Você gera resumos de WhatsApp profissionais e diretos.\\nFormato WhatsApp: *negrito*, _itálico_, bullet •.\\nOrdem: prioritários → normais → silenciados.\\nMáximo 250 palavras.\\nTermine SEMPRE com:\\n📲 _Acesse o dashboard: meudia.saacs.com.br_\"\n    }]\n  },\n  \"contents\": [{ \"role\": \"user\", \"parts\": [{ \"text\": {{ JSON.stringify($json.userMsg) }} }] }],\n  \"generationConfig\": { \"temperature\": 0.4, \"maxOutputTokens\": 600 }\n}",
+        "options": {}
+      }
+    },
+    {
+      "id": "code-format-001",
+      "name": "Formatar Mensagem WA",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 520],
+      "parameters": {
+        "jsCode": "const resp = $input.item.json;\nconst prev = $('Montar Prompt').item.json;\n\nconst text = resp.candidates?.[0]?.content?.parts?.[0]?.text\n  || 'Não foi possível gerar o resumo.\\n📲 _Acesse: meudia.saacs.com.br_';\n\nreturn [{\n  json: {\n    digestText:   text,\n    instanceName: prev.instanceName,\n    phoneNumber:  prev.phoneNumber,\n    instanceId:   prev.instanceId,\n    messageIds:   prev.messageIds\n  }\n}];"
+      }
+    },
+    {
+      "id": "http-evo-001",
+      "name": "Enviar Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1980, 520],
+      "parameters": {
+        "method": "POST",
+        "url": "=https://evolution.saacs.com.br/message/sendText/{{ $json.instanceName }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "apikey", "value": "CA03A237-2DCC-4684-8989-0E615AE6220B" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={ \"number\": {{ JSON.stringify($json.phoneNumber) }}, \"text\": {{ JSON.stringify($json.digestText) }} }",
+        "options": {}
+      }
+    },
+    {
+      "id": "http-mark-001",
+      "name": "Marcar Enviadas",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2180, 520],
+      "parameters": {
+        "method": "PATCH",
+        "url": "={{ $env.SUPABASE_URL }}/rest/v1/message_queue",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "apikey", "value": "={{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Authorization", "value": "=Bearer {{ $env.SUPABASE_SERVICE_KEY }}" },
+            { "name": "Content-Type", "value": "application/json" },
+            { "name": "Prefer", "value": "return=minimal" }
+          ]
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "instance_id", "value": "=eq.{{ $('Formatar Mensagem WA').item.json.instanceId }}" },
+            { "name": "included_in_digest", "value": "eq.false" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={ \"included_in_digest\": true, \"digest_sent_at\": {{ JSON.stringify(new Date().toISOString()) }} }",
+        "options": {}
+      }
+    }
+  ],
+  "connections": {
+    "Cron 30min": {
+      "main": [[{ "node": "Horário SP", "type": "main", "index": 0 }]]
+    },
+    "Horário SP": {
+      "main": [[{ "node": "Buscar Agendamentos", "type": "main", "index": 0 }]]
+    },
+    "Buscar Agendamentos": {
+      "main": [[{ "node": "Loop Instâncias", "type": "main", "index": 0 }]]
+    },
+    "Loop Instâncias": {
+      "main": [
+        [{ "node": "Buscar Instância e Mensagens", "type": "main", "index": 0 }],
+        []
+      ]
+    },
+    "Buscar Instância e Mensagens": {
+      "main": [[{ "node": "Verificar Mensagens", "type": "main", "index": 0 }]]
+    },
+    "Verificar Mensagens": {
+      "main": [[{ "node": "Tem Mensagens?", "type": "main", "index": 0 }]]
+    },
+    "Tem Mensagens?": {
+      "main": [
+        [{ "node": "Montar Prompt", "type": "main", "index": 0 }],
+        [{ "node": "Loop Instâncias", "type": "main", "index": 0 }]
+      ]
+    },
+    "Montar Prompt": {
+      "main": [[{ "node": "Gemini Resumo", "type": "main", "index": 0 }]]
+    },
+    "Gemini Resumo": {
+      "main": [[{ "node": "Formatar Mensagem WA", "type": "main", "index": 0 }]]
+    },
+    "Formatar Mensagem WA": {
+      "main": [[{ "node": "Enviar Digest", "type": "main", "index": 0 }]]
+    },
+    "Enviar Digest": {
+      "main": [[{ "node": "Marcar Enviadas", "type": "main", "index": 0 }]]
+    },
+    "Marcar Enviadas": {
+      "main": [[{ "node": "Loop Instâncias", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
