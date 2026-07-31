@@ -44,6 +44,21 @@ Nunca sugerir deploy manual, upload de arquivos, ou comandos Vercel CLI. Push no
 
 ---
 
+## Ordem de execução das migrations (Supabase 168-app)
+
+1. `supabase_migration_00_base.sql` — instances, contacts, assistant_messages
+2. `supabase_migration_168_core.sql` — schema core do produto
+3. `supabase_migration_grupos_contatos.sql` — grupos de contatos
+4. `supabase_migration_memory.sql` — memória persistente da IA
+5. `supabase_migration_conversations.sql` — histórico de conversas
+6. `supabase_migration_chat_source.sql` — separação BIA vs assistente
+7. `supabase_migration_chat_notificacoes.sql` — notificações
+8. `supabase_migration_onboarding.sql` — estado do onboarding
+
+**Status:** todas rodadas em 2026-07-31 ✅
+
+---
+
 ## Repos
 
 | Repo | Propósito |
