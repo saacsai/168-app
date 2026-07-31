@@ -77,8 +77,15 @@ CREATE TABLE IF NOT EXISTS blocos_fixos (
 
   -- Recorrência
   dias_semana INTEGER[] NOT NULL,  -- [1,2,3,4,5] = seg a sex (0=dom, 6=sab)
-  hora_inicio TIME NOT NULL,
-  hora_fim TIME NOT NULL,
+  hora_inicio TIME NOT NULL,       -- início real do bloco (inclui deslocamento)
+  hora_fim TIME NOT NULL,          -- fim real do bloco (inclui complementares)
+
+  -- Tempo satelite (o que compõe o bloco além da atividade em si)
+  tempo_atividade_min INTEGER,         -- duração pura da atividade
+  tempo_deslocamento_ida_min INTEGER DEFAULT 0,
+  tempo_deslocamento_volta_min INTEGER DEFAULT 0,
+  tempo_complementar_min INTEGER DEFAULT 0,  -- banho, shake, refeição, etc.
+  -- total real = soma de todos acima (deve = hora_fim - hora_inicio)
 
   -- Proteção
   inegociavel BOOLEAN DEFAULT TRUE,  -- true = não cede para demandas externas
