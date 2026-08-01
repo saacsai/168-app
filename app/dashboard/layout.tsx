@@ -8,8 +8,6 @@ import BottomNav from '@/components/BottomNav'
 import EditarPerfilPage from '@/components/EditarPerfilPage'
 import GerenciarPlanoPage from '@/components/GerenciarPlanoPage'
 import UsoCreditsPage from '@/components/UsoCreditsPage'
-import OnboardingView from '@/components/OnboardingView'
-
 const PRIMARY = '#1B2A4A'
 
 type View = 'main' | 'perfil' | 'plano' | 'uso'
@@ -20,8 +18,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [userName, setUserName] = useState('')
   const [userEmail, setUserEmail] = useState('')
   const [assistantName, setAssistantName] = useState('Assistente')
-  const [onboardingCompleted, setOnboardingCompleted] = useState(true) // default true evita flash
-  const [onboardingStep, setOnboardingStep] = useState(0)
+
   const [view, setView] = useState<View>('main')
   const [token, setToken] = useState('')
   const [unreadCount, setUnreadCount] = useState(0)
@@ -73,22 +70,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         .eq('active', true)
         .limit(1)
 
-      // Novo usuário sem instância: cria via setup e envia direto ao onboarding
       if (!rows || rows.length === 0) {
         await fetch('/api/auth/setup', {
           method: 'POST',
           headers: { authorization: `Bearer ${session.access_token}` },
         })
-        // Independente do retorno do setup, é um novo usuário — onboarding obrigatório
-        setOnboardingCompleted(false)
-        setOnboardingStep(0)
         setLoading(false)
         return
       }
 
       if (rows[0].persona_name) setAssistantName(rows[0].persona_name)
-      setOnboardingCompleted(rows[0].onboarding_completed ?? false)
-      setOnboardingStep(rows[0].onboarding_step ?? 0)
       setLoading(false)
     })
   }, [])
@@ -97,18 +88,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     function onNameChange(e: CustomEvent<string>) {
       setAssistantName(e.detail)
     }
-    function onStepChange(e: CustomEvent<number>) {
-      setOnboardingStep(e.detail)
-    }
     function onUserNameChange(e: CustomEvent<string>) {
       setUserName(e.detail)
     }
     window.addEventListener('assistantNameChanged', onNameChange as EventListener)
-    window.addEventListener('onboardingStepChanged', onStepChange as EventListener)
     window.addEventListener('userNameChanged', onUserNameChange as EventListener)
     return () => {
       window.removeEventListener('assistantNameChanged', onNameChange as EventListener)
-      window.removeEventListener('onboardingStepChanged', onStepChange as EventListener)
       window.removeEventListener('userNameChanged', onUserNameChange as EventListener)
     }
   }, [])
@@ -175,8 +161,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <BottomNav
         navItems={NAV}
         primaryColor={PRIMARY}
-        onboardingStep={onboardingStep}
-        onboardingCompleted={onboardingCompleted}
       />
 
       <main className="p-4 md:p-6 min-h-screen pb-24 md:pb-6 md:ml-[256px]">
@@ -189,15 +173,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <GerenciarPlanoPage onVoltar={() => setView('main')} />
         ) : view === 'uso' ? (
           <UsoCreditsPage onVoltar={() => setView('main')} />
-        ) : !onboardingCompleted ? (
-          <OnboardingView
-            userName={userName}
-            initialStep={onboardingStep}
-            onComplete={(name) => {
-              if (name) setAssistantName(name)
-              setOnboardingCompleted(true)
-            }}
-          />
         ) : (
           children
         )}
