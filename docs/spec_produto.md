@@ -327,7 +327,92 @@ Input de voz             → principal canal (discreta, durante reuniões)
 
 ---
 
-## 16. Aprendizado Progressivo (decisão 2026-07-31)
+## 16. Navegação e Configurações (decisão 2026-08-01)
+
+### Menu principal — 4 itens apenas
+```
+HOJE        → home — grade 24h do dia atual + timer ativo
+SEMANA      → grade 168h da semana + ritual de planejamento semanal
+ASSISTENTE  → chat em tempo real com o companheiro
+AJUSTES     → todas as configurações
+```
+
+### AJUSTES — estrutura interna
+```
+Ajustes
+├── Pacto & Metas          → briefing, distribuição 168h, metas por esfera
+├── Blocos Fixos           → academia, sono, inglês, família + tempo satélite
+├── Contas Google          → Calendar + Gmail (múltiplas contas)
+├── WhatsApp               → conexão + contatos + grupos
+└── Notificações           → alertas, auditoria noturna, horário de resumo
+```
+
+---
+
+## 17. Integração Google Workspace — Múltiplas Contas (decisão 2026-08-01)
+
+```
+AJUSTES → Contas Google
+├── + Adicionar conta (OAuth Google)
+├── luciano@saacs.com.br   [Calendários: ✅ Principal ✅ CooperaMais]
+├── luciano@gmail.com      [Calendários: ✅ Pessoal]
+└── outra@gmail.com        [Calendários: ✅ Terra Mesa]
+```
+
+- Cada conta conectada via OAuth independente
+- Por conta: escolha de quais calendários importar (pode ter múltiplos dentro de uma conta)
+- A IA unifica tudo na grade do 168
+- Gmail: ativado ou não por conta (Fase 2)
+
+---
+
+## 18. WhatsApp — Contatos, Grupos e Intenção (decisão 2026-08-01)
+
+### Grupos são filtros, não itens de menu
+Os grupos trabalham nos bastidores. O usuário não navega até eles — configura uma vez em AJUSTES → WhatsApp.
+
+### Intenção configurada pelo usuário (não inferida)
+Cada grupo tem uma intenção declarada — o usuário escolhe, não a IA:
+
+```
+[Grupo] Terra Mesa → Isnaldo, Isis, Arildo
+    Intenção: ○ Detectar prazos e action items ← 
+              ○ Registrar compromissos pessoais
+              ○ Monitorar sem gerar alertas
+              ○ Ignorar
+
+[Grupo] Ócio Criativo → Sandro
+    Intenção: ○ Registrar sem cobrar prazo ←
+```
+
+**Por que usuário e não IA:** a IA nunca saberia que o Sandro no grupo Ócio Criativo não deve gerar cobrança de prazo. Você conhece a nuance, ela não.
+
+### Contatos em múltiplos grupos — regra de resolução
+
+```
+Mensagem de grupo WhatsApp → aplica intenção do grupo (sempre claro)
+
+Mensagem direta (privada):
+    → Contexto da thread claro → IA infere silenciosamente
+    → Contexto ambíguo → IA pergunta uma vez:
+        "Mensagem do Isnaldo. Contexto:
+         ○ Terra Mesa  ○ CooperaMais  ○ Ócio Criativo  ○ Ignorar"
+    → Padrão consolidado → nunca mais pergunta sobre aquela pessoa
+```
+
+### Aprendizado de contexto
+A IA lê 5 camadas antes de decidir:
+1. **Quem** enviou
+2. **De onde** veio (grupo ou direto)
+3. **O quê** disse
+4. **Histórico** da thread (últimas mensagens)
+5. **Memória** — o que já aprendeu sobre essa pessoa
+
+Com contexto rico, raramente precisa perguntar.
+
+---
+
+## 19. Aprendizado Progressivo (decisão 2026-07-31)
 
 ### O problema
 Onboarding não consegue capturar tudo — usuário de primeira viagem não prevê variáveis como tempo pós-academia, jejum intermitente, rotinas implícitas.
@@ -351,17 +436,27 @@ Exemplo: Academia = 1h atividade + 5min ida + 5min volta + 20min banho/shake = *
 ### Concluído ✅
 - [x] Repo GitHub: github.com/saacsai/168-app (público)
 - [x] Deploy: 168.saacs.com.br (Vercel CI/CD)
-- [x] Supabase: projeto 168-app criado
-- [x] Schema core: 8 tabelas com RLS
-- [x] Registrar marca "168" + domínio — **PENDENTE (fazer antes de publicar)**
+- [x] Supabase: projeto 168-app criado + todas as migrations rodadas
+- [x] Schema core: 9 tabelas com RLS
+- [x] Marca: advogado acionado + Sandro criando identidade
+- [x] Spec completa documentada
 
-### Próximo — Desenvolvimento
-- [ ] Rodar supabase_migration_168_core.sql no SQL Editor
-- [ ] Tela do Pacto (primeira tela do onboarding)
-- [ ] Briefing conversacional com IA no dashboard (mínimo 3-5 blocos)
-- [ ] Integração Google Calendar (OAuth Workspace)
-- [ ] Integração Google Meet (transcrição via Drive API)
-- [ ] Motor de confrontação (usa tempo satélite dos blocos)
+### Pendente — Marca
+- [ ] Comprar domínio 168.works
+- [ ] Registrar redes sociais @168works (ou @168app)
+
+### Próximo — Desenvolvimento (ordem sugerida)
+- [ ] Home: grade 24h do dia (view principal)
+- [ ] Timer de execução (Iniciar/Finalizar + alertas -10/-5min)
+- [ ] Readequação automática quando fura o tempo
+- [ ] Ritual de planejamento semanal (view da semana)
+- [ ] Tela do Pacto (onboarding — primeira tela)
+- [ ] Briefing conversacional (mínimo 3-5 blocos declarados)
+- [ ] AJUSTES → Contas Google (OAuth múltiplas contas + calendários)
+- [ ] AJUSTES → WhatsApp (grupos + intenção configurável)
+- [ ] Motor de confrontação (usa tempo satélite)
 - [ ] Auditoria Noturna + sugestões de blocos descobertos
+- [ ] Google Meet (transcrição via Drive API)
+- [ ] PWA (manifest + service worker + push notifications)
 - [ ] Refatorar n8n Fluxo 1 (captura sem resposta a terceiros)
-- [ ] Limpar código base herdado do MeuDIA que não se aplica
+- [ ] Gmail (Fase 2)
