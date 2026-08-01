@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { getSupabase } from '@/lib/supabase'
 import Sidebar from '@/components/Sidebar'
@@ -11,7 +10,7 @@ import GerenciarPlanoPage from '@/components/GerenciarPlanoPage'
 import UsoCreditsPage from '@/components/UsoCreditsPage'
 import OnboardingView from '@/components/OnboardingView'
 
-const PRIMARY = '#2A5F6B'
+const PRIMARY = '#1B2A4A'
 
 type View = 'main' | 'perfil' | 'plano' | 'uso'
 
@@ -125,11 +124,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   const NAV = [
-    { href: '/dashboard',               label: 'Meu Dia',       icon: <NavIcon d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" d2="M9 22V12h6v10" /> },
-    { href: '/dashboard/assistente',    label: assistantName,   icon: <NavIcon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /> },
-    { href: '/dashboard/contatos',      label: 'Contatos',      icon: <NavIcon d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" d2="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" circle={{ cx: 9, cy: 7, r: 4 }} /> },
-    { href: '/dashboard/configuracoes', label: 'Configurações', icon: <NavIcon d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /> },
-    { href: '/dashboard/chat',          label: 'Dúvidas',       icon: <NavIcon d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" d2="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" /> },
+    { href: '/dashboard/hoje',       label: 'Hoje',       icon: <NavIcon d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" d2="M9 22V12h6v10" /> },
+    { href: '/dashboard/semana',     label: 'Semana',     icon: <NavIcon d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01" /> },
+    { href: '/dashboard/assistente', label: assistantName, icon: <NavIcon d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" /> },
+    { href: '/dashboard/ajustes',    label: 'Ajustes',   icon: <NavIcon d="M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /> },
   ]
 
   async function handleLogout() {
@@ -149,8 +147,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Sidebar — apenas desktop */}
       <div className="hidden md:block">
         <Sidebar
-          logoSrc="/meudia_marca.png"
-          productName="MeuDIA"
           navItems={NAV}
           userName={userName}
           userEmail={userEmail}
@@ -159,15 +155,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           onEditarPerfil={() => setView('perfil')}
           onGerenciarPlano={() => setView('plano')}
           onUsoCredits={() => setView('uso')}
-          onboardingStep={onboardingStep}
-          onboardingCompleted={onboardingCompleted}
           unreadCount={unreadCount}
         />
       </div>
 
       {/* Header mobile — logo + sair — todas as abas */}
       <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3" style={{ background: PRIMARY }}>
-        <Image src="/meudia_marca.png" alt="MeuDIA" width={108} height={41} className="object-contain" priority />
+        <span className="text-white font-bold text-2xl tracking-tight">168</span>
         <button
           onClick={handleLogout}
           className="text-xs px-3 py-1.5 rounded-lg"

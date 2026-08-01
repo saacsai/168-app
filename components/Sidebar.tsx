@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import AvatarMenu from './AvatarMenu'
@@ -11,17 +10,8 @@ export interface NavItem {
   icon: React.ReactNode
 }
 
-const UNLOCK_AT: Record<string, number> = {
-  '/dashboard/chat':          -1,
-  '/dashboard/contatos':       1,
-  '/dashboard':                2,
-  '/dashboard/assistente':     3,
-  '/dashboard/configuracoes':  4,
-}
 
 interface Props {
-  logoSrc: string
-  productName: string
   navItems: NavItem[]
   userName: string
   userEmail: string
@@ -30,8 +20,6 @@ interface Props {
   onEditarPerfil: () => void
   onGerenciarPlano: () => void
   onUsoCredits: () => void
-  onboardingStep?: number
-  onboardingCompleted?: boolean
   unreadCount?: number
 }
 
@@ -40,18 +28,14 @@ function initials(nome: string) {
 }
 
 export default function Sidebar({
-  logoSrc,
-  productName,
   navItems,
   userName,
   userEmail,
-  primaryColor = '#2A5F6B',
+  primaryColor = '#1B2A4A',
   onLogout,
   onEditarPerfil,
   onGerenciarPlano,
   onUsoCredits,
-  onboardingStep = 4,
-  onboardingCompleted = true,
   unreadCount = 0,
 }: Props) {
   const pathname = usePathname()
@@ -63,14 +47,7 @@ export default function Sidebar({
     >
       {/* Logo */}
       <div className="flex justify-center pt-6 pb-5 px-4">
-        <Image
-          src={logoSrc}
-          alt={productName}
-          width={162}
-          height={61}
-          className="object-contain"
-          priority
-        />
+        <span className="text-white font-black text-4xl tracking-tighter select-none">168</span>
       </div>
 
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }} />
@@ -79,21 +56,6 @@ export default function Sidebar({
       <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5">
         {navItems.map(item => {
           const active = pathname === item.href
-          const unlockAt = UNLOCK_AT[item.href] ?? 4
-          const locked = !onboardingCompleted && onboardingStep < unlockAt
-
-          if (locked) {
-            return (
-              <div
-                key={item.href}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm select-none"
-                style={{ color: 'rgba(255,255,255,0.25)', cursor: 'default' }}
-              >
-                <span className="opacity-40 flex-shrink-0">{item.icon}</span>
-                <span className="opacity-40">{item.label}</span>
-              </div>
-            )
-          }
 
           return (
             <Link
@@ -138,7 +100,7 @@ export default function Sidebar({
       </div>
 
       <div className="flex flex-col items-center gap-1 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-        <Image src="/logo_saacs_sem_slogan.png" alt="SAACS" width={90} height={24} className="object-contain" style={{ opacity: 0.5 }} />
+        <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.3)' }}>SAACS.AI</span>
       </div>
     </aside>
   )
