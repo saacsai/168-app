@@ -1,5 +1,5 @@
 # 168 — Especificação Completa do Produto
-**Última atualização:** 2026-08-02  
+**Última atualização:** 2026-08-02 (seções 20 e 21 adicionadas)  
 **Status:** Spec em evolução — desenvolvimento iniciado
 
 ---
@@ -481,6 +481,83 @@ Exemplo: Academia = 1h atividade + 5min ida + 5min volta + 20min banho/shake = *
 - [ ] AJUSTES → WhatsApp (grupos + intenção configurável)
 - [ ] Motor de confrontação (usa tempo satélite)
 - [ ] Auditoria Noturna + sugestões de blocos descobertos
+
+---
+
+## 20. O 168 como Legado (decisão 2026-08-02)
+
+O 168 não é um produto. É um método — e o produto é o veículo de entrega diária do método.
+
+### A estrutura dos métodos que viram legado
+
+GTD (David Allen), 7 Hábitos (Covey), Ikigai — nenhum vendeu assinatura de software. Venderam uma forma de ver o mundo. O software veio como consequência, não como produto central. O 168 segue a mesma estrutura:
+
+| Camada | O que é |
+|---|---|
+| **O Pacto** | Premissa filosófica — quem concorda entra, quem diverge não é o target |
+| **O Método** | 168h, Matriz T×D, compromissos consigo mesmo, auditoria sem desculpa |
+| **A Ferramenta** | O app — prática diária do método, não o produto em si |
+| **O Legado** | Livro, palestra, filosofia de vida que se espalha de pessoa para pessoa |
+
+### O livro que já tem título
+
+> *"O que você faz com as suas 168?"*
+
+Não é mais um livro de produtividade. É um manifesto de propósito. A pergunta do título já contém o diagnóstico e a proposta.
+
+---
+
+## 21. Modelo Corporativo e Estratégia de Entrada (decisão 2026-08-02)
+
+### Por que a entrada institucional é a fagulha
+
+Vender o 168 individualmente exige esforço comercial massivo. A entrada institucional resolve isso:
+
+- Luciano como Coordenador do projeto Rede Biosol treina a equipe **em seu papel profissional**, não como vendedor do produto
+- A instituição não compra uma assinatura de app — compra um **programa de capacitação** que melhora a performance do projeto
+- Decisor diferente, orçamento diferente, resistência diferente
+
+O efeito colateral é o que importa: membros que adotam o 168 no contexto do projeto descobrem o método na própria vida. O evangelismo acontece sem esforço comercial.
+
+### A arquitetura de privacidade (o que torna a adoção possível)
+
+O bloqueio número um de ferramentas corporativas: *"meu coordenador vai ver minha vida pessoal."*
+
+O 168 resolve com visibilidade federada: **a conta corporate só enxerga as horas destinadas ao projeto — jamais a vida da pessoa.**
+
+```
+VISÃO DA PESSOA (privada, 168 pessoal completo)
+├── Sono: 56h
+├── Cuidar de Mim: 20h  ← invisível para qualquer projeto
+├── Família: 15h         ← invisível para qualquer projeto
+├── Ócio Criativo: 10h  ← invisível para qualquer projeto
+└── Trabalho: 47h
+    ├── Rede Biosol: 20h  ← ÚNICO dado visível ao Instituto Auá
+    ├── CooperaMais: 15h  ← invisível ao Instituto Auá
+    └── Terra Mesa: 12h   ← invisível ao Instituto Auá
+
+VISÃO DO INSTITUTO AUÁ (restrita ao projeto)
+├── Isnaldo:   20h comprometidas → 18h alocadas → 16h executadas
+├── Técnico X: 20h comprometidas → 20h alocadas → 19h executadas
+└── Luciano:   20h comprometidas → 22h alocadas (sobrecarga detectada ⚠️)
+```
+
+### A conexão com o plano de trabalho
+
+O compromisso de horas já existe num documento institucional (plano de trabalho do projeto). O 168 não cria um novo contrato — honra o que já foi assinado. Isso fecha o argumento institucional: a ferramenta não monitora, ela **organiza o cumprimento de um compromisso pré-existente**.
+
+### Proposta de valor corporativa
+
+Não: *"assine nosso app de gestão"*  
+Sim: *"inclua o 168 no plano de capacitação dos seus colaboradores — e tenha visibilidade de projeto como consequência natural"*
+
+### Regra crítica
+
+Não construir a camada B2B antes da camada individual funcionar perfeitamente. O risco é virar Monday.com — ferramenta que beneficia o gestor e sobrecarrega o colaborador. A sequência correta:
+
+1. Dogfooding individual (Luciano) → valida o método
+2. 2-3 pessoas próximas → valida adoção orgânica
+3. Primeiro projeto institucional → valida o modelo corporativo
 - [ ] Google Meet (transcrição via Drive API)
 - [ ] PWA (manifest + service worker + push notifications)
 - [ ] Refatorar n8n Fluxo 1 (captura sem resposta a terceiros)
