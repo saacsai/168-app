@@ -1,5 +1,5 @@
 # 168 — Especificação Completa do Produto
-**Última atualização:** 2026-08-01  
+**Última atualização:** 2026-08-02  
 **Status:** Spec em evolução — desenvolvimento iniciado
 
 ---
@@ -42,6 +42,31 @@
 **Disciplina é a pecinha do Block Out** que, quando encaixada, destrava todas as outras peças da vida. Motivação, propósito e planejamento são peças que se movem mas não destravam o fluxo enquanto a disciplina não é encaixada.
 
 O 168 não é para qualquer pessoa que quer ser mais produtiva. É para quem compactua com essa premissa. Quem diverge não é o target — e a ferramenta deixa isso claro desde o início com **atrito intencional**.
+
+---
+
+## 3-A. O Problema Central (por que todo mundo falha)
+
+> *"Compromissos comigo mesmo são os mais boicotados."*
+
+Não é falta de agenda. Todo mundo tem agenda. O problema é a **assimetria de fricção**:
+
+- Cancelar uma reunião com outro → constrange, tem custo social, exige justificativa
+- Cancelar a academia, o estudo, o tempo com a família → zero fricção, zero testemunha, zero consequência imediata
+
+Esse desequilíbrio garante que os compromissos com você mesmo sempre cedem primeiro. A agenda comercial reforça isso — só registra o que envolve outros.
+
+**O 168 inverte essa assimetria.** O timer que começa, o bloco que tem registro, a BIA que pergunta "você pulou a academia — o que aconteceu?" sem aceitar desculpa abstrata. O compromisso com você mesmo ganha o mesmo peso de uma reunião de negócios.
+
+### O efeito colateral (que não deve ser o argumento de venda)
+
+A pessoa que cumpre os compromissos consigo mesma — academia, estudo, família, ócio criativo — fica mais saudável, mais presente, mais criativa, mais resiliente. A produtividade e os resultados profissionais aumentam como **consequência**, não como objetivo.
+
+Quem vende produtividade está vendendo o sintoma. O 168 trata a causa: **disciplina como espinha dorsal de todas as esferas da vida**.
+
+### Posicionamento de mercado
+
+O 168 não compete com Google Calendar, Notion ou Todoist. Compete com o personal trainer, o coach de vida, o terapeuta de foco. A categoria é diferente.
 
 ---
 
