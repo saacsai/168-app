@@ -54,8 +54,10 @@ Nunca sugerir deploy manual, upload de arquivos, ou comandos Vercel CLI. Push no
 6. `supabase_migration_chat_source.sql` — separação BIA vs assistente
 7. `supabase_migration_chat_notificacoes.sql` — notificações
 8. `supabase_migration_onboarding.sql` — estado do onboarding
+9. `supabase_migration_execucao_bloco.sql` — execuções de blocos, encaminhamentos expandidos
 
-**Status:** todas rodadas em 2026-07-31 ✅
+**Status migrations 1-8:** rodadas em 2026-07-31 ✅  
+**Status migration 9:** pendente — rodar no Supabase 168-app ⏳
 
 ---
 
