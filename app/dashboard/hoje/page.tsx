@@ -7,6 +7,7 @@ import PainelBIA from '@/components/PainelBIA'
 import TimerAtivo, { type TimerState } from '@/components/TimerAtivo'
 import BlocoModal, { type BlocoParaModal } from '@/components/BlocoModal'
 import NovoBlocoModal from '@/components/NovoBlocoModal'
+import ResumoModal, { type ExecucaoFinalizada } from '@/components/ResumoModal'
 
 type ModalOvertime = {
   label: string
@@ -17,6 +18,7 @@ export default function HojePage() {
   const [timer, setTimer] = useState<TimerState | null>(null)
   const [modalBloco, setModalBloco] = useState<BlocoParaModal | null>(null)
   const [overtimeModal, setOvertimeModal] = useState<ModalOvertime | null>(null)
+  const [execucaoFinalizada, setExecucaoFinalizada] = useState<ExecucaoFinalizada | null>(null)
   const [novoBloco, setNovoBloco] = useState<number | null>(null)
   const [gradeKey, setGradeKey] = useState(0)
 
@@ -41,14 +43,14 @@ export default function HojePage() {
 
     const finalizadoEm = new Date()
     const duracaoRealMin = Math.round((finalizadoEm.getTime() - timer.iniciadoEm.getTime()) / 60000)
-    const overtimeMin = duracaoRealMin - timer.duracaoMin
+    const overtimeMin = Math.max(0, duracaoRealMin - timer.duracaoMin)
 
-    // Salvar execucao_bloco no Supabase
+    let execucaoId = ''
     try {
       const supabase = getSupabase()
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
-        await supabase.from('execucao_bloco').insert({
+        const { data } = await supabase.from('execucao_bloco').insert({
           user_id: session.user.id,
           bloco_fixo_id: timer.blocoId,
           data: new Date().toISOString().slice(0, 10),
@@ -58,17 +60,24 @@ export default function HojePage() {
           label: timer.label,
           esfera: timer.esfera,
           status: 'concluido',
-        })
+        }).select('id').single()
+        if (data) execucaoId = data.id
       }
     } catch {
-      // silencioso — não bloqueia o fluxo
+      // silencioso
     }
 
+    const timerLabel = timer.label
+    const timerEsfera = timer.esfera
     setTimer(null)
+    setExecucaoFinalizada({ id: execucaoId, label: timerLabel, esfera: timerEsfera, duracaoRealMin, overtimeMin })
+  }
 
-    if (overtimeMin > 0) {
-      setOvertimeModal({ label: timer.label, minutos: overtimeMin })
-    }
+  function handleResumoClose() {
+    const overtime = execucaoFinalizada?.overtimeMin ?? 0
+    const label = execucaoFinalizada?.label ?? ''
+    setExecucaoFinalizada(null)
+    if (overtime > 0) setOvertimeModal({ label, minutos: overtime })
   }
 
   return (
@@ -106,6 +115,11 @@ export default function HojePage() {
         hora={novoBloco}
         onClose={() => setNovoBloco(null)}
         onSaved={() => { setGradeKey(k => k + 1); setNovoBloco(null) }}
+      />
+
+      <ResumoModal
+        execucao={execucaoFinalizada}
+        onClose={handleResumoClose}
       />
 
       {/* Modal de bloco */}

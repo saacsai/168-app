@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 export type TimerState = {
   blocoId: string
@@ -34,8 +34,25 @@ interface Props {
   onFinalizar: () => void
 }
 
+function notificar(titulo: string, corpo: string) {
+  if (typeof window === 'undefined') return
+  if ('Notification' in window && Notification.permission === 'granted') {
+    new Notification(titulo, { body: corpo, icon: '/favicon.ico' })
+  }
+}
+
 export default function TimerAtivo({ timer, onFinalizar }: Props) {
   const [elapsedMin, setElapsedMin] = useState(0)
+  const alertasDisparados = useRef<Set<string>>(new Set())
+
+  // Pede permissão de notificação quando timer começa
+  useEffect(() => {
+    if (!timer) return
+    alertasDisparados.current.clear()
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+  }, [timer?.blocoId])
 
   useEffect(() => {
     if (!timer) { setElapsedMin(0); return }
@@ -71,6 +88,20 @@ export default function TimerAtivo({ timer, onFinalizar }: Props) {
   const alertaLeve = restanteMin <= 10 && restanteMin > 5 && !overtime
   const alertaForte = restanteMin <= 5 && !overtime
   const cor = ESFERA_COR[timer.esfera] ?? '#1B2A4A'
+
+  // Disparar notificações nos marcos de tempo
+  if (alertaLeve && !alertasDisparados.current.has('10')) {
+    alertasDisparados.current.add('10')
+    notificar('168 · Timer', `${timer.label} — 10 minutos restantes`)
+  }
+  if (alertaForte && !alertasDisparados.current.has('5')) {
+    alertasDisparados.current.add('5')
+    notificar('168 · Timer', `${timer.label} — 5 minutos restantes`)
+  }
+  if (overtime && !alertasDisparados.current.has('overtime')) {
+    alertasDisparados.current.add('overtime')
+    notificar('168 · Timer', `${timer.label} — tempo esgotado`)
+  }
 
   const borderColor = overtime ? '#dc2626' : alertaForte ? '#f59e0b' : cor
 
