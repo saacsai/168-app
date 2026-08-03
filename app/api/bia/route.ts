@@ -2,6 +2,7 @@ import { streamText, type ModelMessage } from 'ai'
 import { modeloAcao } from '@/lib/ai'
 
 export const runtime = 'nodejs'
+export const maxDuration = 30
 
 const SYSTEM_PROMPT = `Você é a BIA, assistente pessoal do método 168.
 
