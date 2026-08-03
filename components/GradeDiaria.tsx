@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
+import { type BlocoParaModal } from './BlocoModal'
 
 type BlocoFixo = {
   id: string
@@ -10,6 +11,12 @@ type BlocoFixo = {
   hora_inicio: string
   hora_fim: string
   inegociavel: boolean
+}
+
+function duracaoMin(horaInicio: string, horaFim: string): number {
+  const [hi, mi] = horaInicio.split(':').map(Number)
+  const [hf, mf] = horaFim.split(':').map(Number)
+  return (hf * 60 + mf) - (hi * 60 + mi)
 }
 
 const ESFERA: Record<string, { cor: string; nome: string }> = {
@@ -44,7 +51,12 @@ function blocoParaHora(blocos: BlocoFixo[], h: number): BlocoFixo | null {
 const HORA_INICIO_GRADE = 6
 const HORAS_GRADE = Array.from({ length: 24 - HORA_INICIO_GRADE }, (_, i) => i + HORA_INICIO_GRADE)
 
-export default function GradeDiaria() {
+interface Props {
+  timerBlocoId?: string
+  onBlocoClick?: (bloco: BlocoParaModal) => void
+}
+
+export default function GradeDiaria({ timerBlocoId, onBlocoClick }: Props) {
   const [blocos, setBlocos] = useState<BlocoFixo[]>([])
   const [sonoExpanded, setSonoExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -173,16 +185,31 @@ export default function GradeDiaria() {
           const bloco = blocoParaHora(blocos, h)
           const cfg = bloco ? (ESFERA[bloco.esfera] ?? null) : null
           const isNow = h === horaAtual
+          const isAtivo = bloco?.id === timerBlocoId
+
+          function handleClick() {
+            if (!bloco || bloco.esfera === 'sono' || !onBlocoClick) return
+            onBlocoClick({
+              id: bloco.id,
+              label: bloco.label,
+              esfera: bloco.esfera,
+              hora_inicio: bloco.hora_inicio,
+              hora_fim: bloco.hora_fim,
+              inegociavel: bloco.inegociavel,
+              duracaoMin: duracaoMin(bloco.hora_inicio, bloco.hora_fim),
+            })
+          }
 
           return (
             <div
               key={h}
-              className="flex items-stretch"
+              className={`flex items-stretch ${bloco && bloco.esfera !== 'sono' ? 'cursor-pointer' : ''}`}
               style={{
                 minHeight: '44px',
                 borderLeft: isNow ? '3px solid #1B2A4A' : '3px solid transparent',
                 background: isNow && !bloco ? 'rgba(27,42,74,0.025)' : undefined,
               }}
+              onClick={handleClick}
             >
               {/* Hora */}
               <div className="flex items-center w-12 flex-shrink-0 px-3">
@@ -200,12 +227,16 @@ export default function GradeDiaria() {
               {/* Conteúdo */}
               {cfg && bloco ? (
                 <div
-                  className="flex-1 flex items-center gap-2 px-3 py-2"
+                  className="flex-1 flex items-center gap-2 px-3 py-2 transition-opacity"
                   style={{
-                    backgroundColor: cfg.cor + '18',
+                    backgroundColor: isAtivo ? cfg.cor + '28' : cfg.cor + '18',
                     borderLeft: `3px solid ${cfg.cor}`,
+                    opacity: 1,
                   }}
                 >
+                  {isAtivo && (
+                    <div className="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" style={{ background: cfg.cor }} />
+                  )}
                   <span
                     className="text-[10px] font-bold tracking-wide flex-shrink-0"
                     style={{ color: cfg.cor }}
