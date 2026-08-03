@@ -43,6 +43,7 @@ export default function ResumoModal({ execucao, onClose }: Props) {
   }
 
   async function salvar() {
+    if (!execucao) return
     setSalvando(true)
     try {
       const supabase = getSupabase()
