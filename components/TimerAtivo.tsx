@@ -25,7 +25,6 @@ function formatarTempo(minutos: number): string {
   const abs = Math.abs(minutos)
   const h = Math.floor(abs / 60)
   const m = Math.floor(abs % 60)
-  const s = ''
   if (h > 0) return `${h}h ${String(m).padStart(2, '0')}min`
   return `${m}min`
 }
