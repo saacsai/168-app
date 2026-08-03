@@ -58,11 +58,21 @@ interface Props {
   refreshKey?: number
 }
 
+const ROW_HEIGHT = 44
+
 export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, refreshKey }: Props) {
   const [blocos, setBlocos] = useState<BlocoFixo[]>([])
   const [sonoExpanded, setSonoExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
-  const horaAtual = new Date().getHours()
+  const [agora, setAgora] = useState(() => new Date())
+
+  useEffect(() => {
+    const id = setInterval(() => setAgora(new Date()), 60_000)
+    return () => clearInterval(id)
+  }, [])
+
+  const horaAtual = agora.getHours()
+  const minutoAtual = agora.getMinutes()
 
   useEffect(() => {
     async function load() {
@@ -182,7 +192,19 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
       )}
 
       {/* Grade principal: 06h → 23h */}
-      <div className="divide-y divide-gray-50">
+      <div className="divide-y divide-gray-50 relative">
+
+        {/* Indicador de hora atual */}
+        {horaAtual >= HORA_INICIO_GRADE && horaAtual < 24 && (
+          <div
+            className="absolute left-0 right-0 z-10 flex items-center pointer-events-none"
+            style={{ top: `${(horaAtual - HORA_INICIO_GRADE) * ROW_HEIGHT + (minutoAtual / 60) * ROW_HEIGHT}px` }}
+          >
+            <div className="w-2 h-2 rounded-full flex-shrink-0 ml-1" style={{ background: '#ef4444' }} />
+            <div className="flex-1 h-px" style={{ background: '#ef4444' }} />
+          </div>
+        )}
+
         {HORAS_GRADE.map(h => {
           const bloco = blocoParaHora(blocos, h)
           const cfg = bloco ? (ESFERA[bloco.esfera] ?? null) : null
@@ -210,7 +232,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
               key={h}
               className={`group flex items-stretch ${bloco && bloco.esfera !== 'sono' ? 'cursor-pointer' : 'cursor-pointer'}`}
               style={{
-                minHeight: '44px',
+                height: `${ROW_HEIGHT}px`,
                 borderLeft: isNow ? '3px solid #1B2A4A' : '3px solid transparent',
                 background: isNow && !bloco ? 'rgba(27,42,74,0.025)' : undefined,
               }}
