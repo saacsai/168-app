@@ -54,9 +54,11 @@ const HORAS_GRADE = Array.from({ length: 24 - HORA_INICIO_GRADE }, (_, i) => i +
 interface Props {
   timerBlocoId?: string
   onBlocoClick?: (bloco: BlocoParaModal) => void
+  onSlotClick?: (hora: number) => void
+  refreshKey?: number
 }
 
-export default function GradeDiaria({ timerBlocoId, onBlocoClick }: Props) {
+export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, refreshKey }: Props) {
   const [blocos, setBlocos] = useState<BlocoFixo[]>([])
   const [sonoExpanded, setSonoExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -81,7 +83,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick }: Props) {
       setLoading(false)
     }
     load()
-  }, [])
+  }, [refreshKey])
 
   if (loading) {
     return (
@@ -188,8 +190,11 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick }: Props) {
           const isAtivo = bloco?.id === timerBlocoId
 
           function handleClick() {
-            if (!bloco || bloco.esfera === 'sono' || !onBlocoClick) return
-            onBlocoClick({
+            if (!bloco || bloco.esfera === 'sono') {
+              if (!bloco) onSlotClick?.(h)
+              return
+            }
+            onBlocoClick?.({
               id: bloco.id,
               label: bloco.label,
               esfera: bloco.esfera,
@@ -203,7 +208,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick }: Props) {
           return (
             <div
               key={h}
-              className={`flex items-stretch ${bloco && bloco.esfera !== 'sono' ? 'cursor-pointer' : ''}`}
+              className={`group flex items-stretch ${bloco && bloco.esfera !== 'sono' ? 'cursor-pointer' : 'cursor-pointer'}`}
               style={{
                 minHeight: '44px',
                 borderLeft: isNow ? '3px solid #1B2A4A' : '3px solid transparent',
@@ -252,10 +257,13 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick }: Props) {
                 </div>
               ) : (
                 <div
-                  className="flex-1 flex items-center px-3 py-2"
+                  className="flex-1 flex items-center justify-between px-3 py-2"
                   style={{ borderLeft: '3px solid transparent' }}
                 >
                   <span className="text-xs" style={{ color: '#e5e7eb' }}>livre</span>
+                  <span className="text-xs text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">
+                    + adicionar
+                  </span>
                 </div>
               )}
             </div>

@@ -6,6 +6,7 @@ import GradeDiaria from '@/components/GradeDiaria'
 import PainelBIA from '@/components/PainelBIA'
 import TimerAtivo, { type TimerState } from '@/components/TimerAtivo'
 import BlocoModal, { type BlocoParaModal } from '@/components/BlocoModal'
+import NovoBlocoModal from '@/components/NovoBlocoModal'
 
 type ModalOvertime = {
   label: string
@@ -16,6 +17,8 @@ export default function HojePage() {
   const [timer, setTimer] = useState<TimerState | null>(null)
   const [modalBloco, setModalBloco] = useState<BlocoParaModal | null>(null)
   const [overtimeModal, setOvertimeModal] = useState<ModalOvertime | null>(null)
+  const [novoBloco, setNovoBloco] = useState<number | null>(null)
+  const [gradeKey, setGradeKey] = useState(0)
 
   const hoje = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -85,6 +88,8 @@ export default function HojePage() {
           <GradeDiaria
             timerBlocoId={timer?.blocoId}
             onBlocoClick={setModalBloco}
+            onSlotClick={setNovoBloco}
+            refreshKey={gradeKey}
           />
         </div>
 
@@ -96,6 +101,12 @@ export default function HojePage() {
           <PainelBIA />
         </div>
       </div>
+
+      <NovoBlocoModal
+        hora={novoBloco}
+        onClose={() => setNovoBloco(null)}
+        onSaved={() => { setGradeKey(k => k + 1); setNovoBloco(null) }}
+      />
 
       {/* Modal de bloco */}
       <BlocoModal
