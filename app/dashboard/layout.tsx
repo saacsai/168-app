@@ -51,11 +51,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     const supabase = getSupabase()
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session) {
-        window.location.href = '/login'
-        return
-      }
+
+    async function setupSession(session: import('@supabase/supabase-js').Session) {
       setToken(session.access_token)
       setUserEmail(session.user.email || '')
       setUserName(
@@ -81,7 +78,20 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       if (rows[0].persona_name) setAssistantName(rows[0].persona_name)
       setLoading(false)
+    }
+
+    // onAuthStateChange aguarda hidratação completa (evita race condition pós-OAuth)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+        if (session) {
+          setupSession(session)
+        } else if (event === 'INITIAL_SESSION') {
+          window.location.href = '/login'
+        }
+      }
     })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   useEffect(() => {
