@@ -9,10 +9,9 @@ Leia este arquivo antes de qualquer tarefa neste repo.
 **168 / Um Meio Oito** = app de propósito de vida baseado nas 168 horas semanais.  
 Spec completa: `/Users/lucianomaeda/meudia-dashboard/Novo/spec_168_produto_completo.md`
 
-**Domínio definitivo: `ummeiaoito.ai`** — compra agendada para 2026-08-06 via Cloudflare.  
-Deploy atual (provisório): `168.saacs.com.br`
-
-⚠️ **NÃO configurar** OAuth Google Calendar, Stripe, nem nenhuma integração com URL antes de migrar para `ummeiaoito.ai`.
+**Domínio provisório:** `168.lucianomaeda.com.br` (ativo ✅ — usar para OAuth, Stripe, integrações)  
+**Domínio definitivo:** `ummeiaoito.ai` — comprar via Cloudflare quando budget permitir (~R$1.000)  
+Deploy: `168.saacs.com.br` ainda ativo (Vercel aponta para ambos)
 
 ---
 

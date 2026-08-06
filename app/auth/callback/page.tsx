@@ -29,9 +29,8 @@ export default function CallbackPage() {
 
       if (!session) { window.location.href = '/login?erro=link-invalido'; return }
 
-      const whatsapp = session.user.user_metadata?.whatsapp
-      const provider = session.user.app_metadata?.provider
-      window.location.href = (!whatsapp && provider === 'google') ? '/complete-perfil' : '/dashboard'
+      const next = params.get('next') || '/dashboard'
+      window.location.href = next
     }
 
     resolve()
