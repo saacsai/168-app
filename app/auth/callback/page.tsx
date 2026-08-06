@@ -9,31 +9,43 @@ export default function CallbackPage() {
     const params = new URLSearchParams(window.location.search)
     const supabase = getSupabase()
 
-    // Recovery de senha — redireciona para a tela de nova senha
     if (hash.includes('type=recovery')) {
       window.location.href = '/reset-password' + hash
       return
     }
 
-    async function resolve() {
-      let session = (await supabase.auth.getSession()).data.session
+    const next = params.get('next') || '/dashboard'
 
-      if (!session) {
-        const code = params.get('code')
-        if (code) {
-          const { error: err } = await supabase.auth.exchangeCodeForSession(code)
-          if (err) { window.location.href = '/login?erro=link-invalido'; return }
-          session = (await supabase.auth.getSession()).data.session
-        }
+    // Aguarda sessão estabelecida via onAuthStateChange (evita race condition PKCE)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        subscription.unsubscribe()
+        window.location.href = next
       }
+    })
 
-      if (!session) { window.location.href = '/login?erro=link-invalido'; return }
+    // Fallback: se já há sessão ativa, redireciona diretamente
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        subscription.unsubscribe()
+        window.location.href = next
+      }
+    })
 
-      const next = params.get('next') || '/dashboard'
-      window.location.href = next
+    // Troca o código PKCE se presente
+    const code = params.get('code')
+    if (code) {
+      supabase.auth.exchangeCodeForSession(code).then(({ error }) => {
+        if (error) {
+          subscription.unsubscribe()
+          window.location.href = '/login?erro=auth'
+        }
+      })
+    } else if (!hash && !code) {
+      // Nenhum código nem hash — redireciona para login
+      subscription.unsubscribe()
+      window.location.href = '/login'
     }
-
-    resolve()
   }, [])
 
   return (
