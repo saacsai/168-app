@@ -85,7 +85,8 @@ export default function TimerAtivo({ timer, onFinalizar }: Props) {
       alertasDisparados.current.add('overtime')
       notificar('168 · Timer', `${timer.label} — tempo esgotado`)
     }
-  }, [elapsedMin, timer])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [elapsedMin])
 
   // Sem timer ativo — placeholder
   if (!timer) {
@@ -112,7 +113,6 @@ export default function TimerAtivo({ timer, onFinalizar }: Props) {
   const cor = ESFERA_COR[timer.esfera] ?? '#1B2A4A'
 
   const borderColor = overtime ? '#dc2626' : alertaForte ? '#f59e0b' : cor
-  const pulsing = alertaForte || overtime
 
   return (
     <div
