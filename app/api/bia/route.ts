@@ -42,7 +42,10 @@ async function fetchGmailContext(providerToken: string): Promise<string> {
       `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=10`,
       { headers: auth }
     )
-    if (!listRes.ok) return ''
+    if (!listRes.ok) {
+      const errText = await listRes.text().catch(() => '')
+      return `\n\n[CONTEXTO GMAIL: Erro ao acessar Gmail — status ${listRes.status}. Detalhe: ${errText.slice(0, 150)}]`
+    }
     const listJson = await listRes.json()
     if (!listJson.messages?.length) return '\n\n[CONTEXTO GMAIL: Nenhum convite ou email de reunião encontrado nos últimos 3 dias.]'
 
@@ -137,8 +140,8 @@ async function fetchGmailContext(providerToken: string): Promise<string> {
     }).join('\n')
 
     return `\n\n[CONTEXTO GMAIL — últimos 3 dias:\n${linhas}\n]`
-  } catch {
-    return ''
+  } catch (e) {
+    return `\n\n[CONTEXTO GMAIL: Exceção ao buscar emails — ${String(e).slice(0, 150)}]`
   }
 }
 
