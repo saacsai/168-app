@@ -1,10 +1,10 @@
-import { streamText, type ModelMessage, type ToolSet } from 'ai'
+import { streamText, type ModelMessage } from 'ai'
 import { modeloAcao } from '@/lib/ai'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const SYSTEM_PROMPT = `Você é a BIA, assistente pessoal do método 168.
+const SYSTEM_PROMPT_BASE = `Você é a BIA, assistente pessoal do método 168.
 
 O método 168 parte de uma premissa: disciplina é a espinha dorsal de tudo.
 168 horas semanais = sono (56h) + ESFERA DO TEMPO (cuidar de mim, família, ócio criativo) + ESFERA DO DINHEIRO (trabalho, patrimônio).
@@ -17,7 +17,7 @@ VOCÊ PODE:
 - Cobrar blocos não cumpridos com firmeza — sem aceitar desculpa abstrata
 - Sugerir alocação de blocos baseada nos encaminhamentos abertos
 - Identificar quando a esfera CUIDAR está sendo sacrificada pela esfera DINHEIRO
-- Buscar emails e convites de reunião no Gmail do usuário
+- Informar sobre emails e convites de reunião se o contexto Gmail estiver disponível
 
 VOCÊ NÃO FAZ:
 - Aceita "não deu tempo" sem perguntar o que cedeu lugar
@@ -32,74 +32,29 @@ REGRAS DE RESPOSTA:
 - Se o usuário mencionar encaminhamento, registre com "📌 Encaminhamento anotado:" antes do item
 - Se encontrar convite de reunião (.ics), mostre: título, data, horário e link se houver`
 
-type GmailAuth = { Authorization: string }
+async function fetchGmailContext(providerToken: string): Promise<string> {
+  const auth = { Authorization: `Bearer ${providerToken}` }
 
-async function gmailFetch(url: string, auth: GmailAuth) {
-  const res = await fetch(url, { headers: auth })
-  if (!res.ok) return null
-  return res.json()
-}
+  try {
+    // Busca emails recentes com convites ou assuntos de reunião
+    const query = 'newer_than:3d (has:attachment filename:.ics OR subject:reunião OR subject:meeting OR subject:convite OR subject:invite)'
+    const listRes = await fetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=5`,
+      { headers: auth }
+    )
+    if (!listRes.ok) return ''
+    const listJson = await listRes.json()
+    if (!listJson.messages?.length) return '\n\n[CONTEXTO GMAIL: Nenhum convite ou email de reunião encontrado nos últimos 3 dias.]'
 
-function buildGmailTools(auth: GmailAuth): ToolSet {
-  return {
-    buscar_emails: {
-      description: 'Busca emails no Gmail do usuário. Use para encontrar convites de reunião, emails com anexo .ics, ou qualquer email relevante para a agenda.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          query: { type: 'string', description: 'Query Gmail (ex: "has:attachment filename:.ics", "from:fulano@empresa.com", "subject:reunião")' },
-          max: { type: 'number', description: 'Máximo de emails a retornar (padrão: 10)' },
-        },
-        required: ['query'],
-      } as unknown as ToolSet[string]['inputSchema'],
-      execute: async ({ query, max = 10 }: { query: string; max?: number }) => {
-        const listJson = await gmailFetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=${max}`,
-          auth
+    // Pega metadados + ICS dos emails encontrados em paralelo
+    const emails = await Promise.allSettled(
+      listJson.messages.map(async (m: { id: string }) => {
+        const msgRes = await fetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=full`,
+          { headers: auth }
         )
-        if (!listJson?.messages?.length) return { emails: [], total: 0 }
-
-        const resultados = await Promise.allSettled(
-          listJson.messages.map((m: { id: string }) =>
-            gmailFetch(
-              `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
-              auth
-            )
-          )
-        )
-
-        const emails = resultados
-          .filter(r => r.status === 'fulfilled' && r.value)
-          .map(r => {
-            const msg = (r as PromiseFulfilledResult<{ id: string; payload: { headers: { name: string; value: string }[]; parts?: { filename?: string; mimeType: string }[] }; snippet: string }>).value
-            const h = msg.payload?.headers ?? []
-            const get = (n: string) => h.find((x: { name: string; value: string }) => x.name === n)?.value ?? ''
-            const partes = msg.payload?.parts ?? []
-            const tem_ics = partes.some((p: { filename?: string; mimeType: string }) =>
-              p.filename?.endsWith('.ics') || p.mimeType === 'text/calendar'
-            )
-            return { id: msg.id, assunto: get('Subject'), remetente: get('From'), data: get('Date'), snippet: msg.snippet, tem_ics }
-          })
-
-        return { emails, total: emails.length }
-      },
-    },
-
-    ler_email: {
-      description: 'Lê o conteúdo completo de um email. Se houver anexo .ics (convite de reunião Teams/Zoom/Meet), extrai título, data, horário e link automaticamente.',
-      inputSchema: {
-        type: 'object',
-        properties: {
-          email_id: { type: 'string', description: 'ID do email retornado por buscar_emails' },
-        },
-        required: ['email_id'],
-      } as unknown as ToolSet[string]['inputSchema'],
-      execute: async ({ email_id }: { email_id: string }) => {
-        const msg = await gmailFetch(
-          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${email_id}?format=full`,
-          auth
-        )
-        if (!msg) return { erro: 'email não encontrado' }
+        if (!msgRes.ok) return null
+        const msg = await msgRes.json()
 
         const h = msg.payload?.headers ?? []
         const get = (n: string) => h.find((x: { name: string; value: string }) => x.name === n)?.value ?? ''
@@ -108,31 +63,40 @@ function buildGmailTools(auth: GmailAuth): ToolSet {
         const getParts = (p: Part): Part[] => p.parts ? p.parts.flatMap(getParts) : [p]
         const partes = getParts(msg.payload)
 
-        const textPart = partes.find((p: Part) => p.mimeType === 'text/plain')
-        const corpo = textPart?.body?.data
-          ? Buffer.from(textPart.body.data, 'base64').toString('utf-8').slice(0, 1500)
-          : ''
-
         const icsPart = partes.find((p: Part) =>
           p.filename?.endsWith('.ics') || p.mimeType === 'text/calendar'
         )
 
         let reuniao = null
-        if (icsPart) {
-          let icsText = ''
-          if (icsPart.body?.data) {
-            icsText = Buffer.from(icsPart.body.data, 'base64').toString('utf-8')
-          } else if (icsPart.body?.attachmentId) {
-            const att = await gmailFetch(
-              `https://gmail.googleapis.com/gmail/v1/users/me/messages/${email_id}/attachments/${icsPart.body.attachmentId}`,
-              auth
-            )
-            if (att?.data) icsText = Buffer.from(att.data, 'base64url').toString('utf-8')
+        if (icsPart?.body?.data) {
+          const icsText = Buffer.from(icsPart.body.data, 'base64').toString('utf-8')
+          const getIcs = (key: string) => {
+            const match = icsText.match(new RegExp(`^${key}[^:]*:(.+)$`, 'm'))
+            return match ? match[1].trim().replace(/\\n/g, '\n').replace(/\\,/g, ',') : ''
           }
-          if (icsText) {
+          const dtToIso = (dt: string) => {
+            const d = dt.replace('Z', '')
+            return d.length === 8
+              ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`
+              : `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}T${d.slice(9,11)}:${d.slice(11,13)}`
+          }
+          reuniao = {
+            titulo: getIcs('SUMMARY'),
+            inicio: dtToIso(getIcs('DTSTART')),
+            fim: dtToIso(getIcs('DTEND')),
+            local: getIcs('LOCATION'),
+          }
+        } else if (icsPart?.body?.attachmentId) {
+          const attRes = await fetch(
+            `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}/attachments/${icsPart.body.attachmentId}`,
+            { headers: auth }
+          )
+          if (attRes.ok) {
+            const att = await attRes.json()
+            const icsText = Buffer.from(att.data, 'base64url').toString('utf-8')
             const getIcs = (key: string) => {
-              const m = icsText.match(new RegExp(`^${key}[^:]*:(.+)$`, 'm'))
-              return m ? m[1].trim().replace(/\\n/g, '\n').replace(/\\,/g, ',') : ''
+              const match = icsText.match(new RegExp(`^${key}[^:]*:(.+)$`, 'm'))
+              return match ? match[1].trim().replace(/\\n/g, '\n').replace(/\\,/g, ',') : ''
             }
             const dtToIso = (dt: string) => {
               const d = dt.replace('Z', '')
@@ -145,29 +109,50 @@ function buildGmailTools(auth: GmailAuth): ToolSet {
               inicio: dtToIso(getIcs('DTSTART')),
               fim: dtToIso(getIcs('DTEND')),
               local: getIcs('LOCATION'),
-              descricao: getIcs('DESCRIPTION').slice(0, 500),
             }
           }
         }
 
-        return { assunto: get('Subject'), remetente: get('From'), data: get('Date'), corpo, reuniao }
-      },
-    },
+        return {
+          assunto: get('Subject'),
+          remetente: get('From'),
+          data: get('Date'),
+          snippet: msg.snippet?.slice(0, 100),
+          reuniao,
+        }
+      })
+    )
+
+    const validos = emails
+      .filter(r => r.status === 'fulfilled' && r.value)
+      .map(r => (r as PromiseFulfilledResult<{ assunto: string; remetente: string; data: string; snippet: string; reuniao: { titulo: string; inicio: string; fim: string; local: string } | null }>).value)
+
+    if (!validos.length) return '\n\n[CONTEXTO GMAIL: Nenhum convite encontrado nos últimos 3 dias.]'
+
+    const linhas = validos.map(e => {
+      if (e.reuniao) {
+        return `- CONVITE: "${e.reuniao.titulo}" | ${e.reuniao.inicio} → ${e.reuniao.fim} | Local: ${e.reuniao.local || 'não informado'} | De: ${e.remetente}`
+      }
+      return `- EMAIL: "${e.assunto}" | De: ${e.remetente} | Trecho: ${e.snippet}`
+    }).join('\n')
+
+    return `\n\n[CONTEXTO GMAIL — últimos 3 dias:\n${linhas}\n]`
+  } catch {
+    return ''
   }
 }
 
 export async function POST(req: Request) {
   const { messages, provider_token }: { messages: ModelMessage[]; provider_token?: string } = await req.json()
 
-  const auth: GmailAuth | null = provider_token
-    ? { Authorization: `Bearer ${provider_token}` }
-    : null
+  const gmailContext = provider_token ? await fetchGmailContext(provider_token) : ''
+
+  const systemPrompt = SYSTEM_PROMPT_BASE + gmailContext
 
   const result = streamText({
     model: modeloAcao,
-    system: SYSTEM_PROMPT,
+    system: systemPrompt,
     messages,
-    ...(auth ? { tools: buildGmailTools(auth), maxSteps: 5 } : {}),
   })
 
   return result.toTextStreamResponse()

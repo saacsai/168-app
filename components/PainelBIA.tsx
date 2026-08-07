@@ -51,8 +51,11 @@ export default function PainelBIA() {
     setMessages(prev => [...prev, { id: assistantId, role: 'assistant', content: '' }])
 
     try {
+      const controller = new AbortController()
+      const timeout = setTimeout(() => controller.abort(), 55_000)
       const res = await fetch('/api/bia', {
         method: 'POST',
+        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           ...(token ? { authorization: `Bearer ${token}` } : {}),
@@ -62,6 +65,7 @@ export default function PainelBIA() {
           provider_token: providerToken || undefined,
         }),
       })
+      clearTimeout(timeout)
 
       if (!res.body) return
       const reader = res.body.getReader()
