@@ -36,6 +36,16 @@ async function fetchGmailContext(providerToken: string): Promise<string> {
   const auth = { Authorization: `Bearer ${providerToken}` }
 
   try {
+    // Verifica scopes do token antes de qualquer chamada Gmail
+    const tokenInfoRes = await fetch(`https://www.googleapis.com/oauth2/v3/tokeninfo?access_token=${providerToken}`)
+    if (tokenInfoRes.ok) {
+      const tokenInfo = await tokenInfoRes.json()
+      const scopes: string = tokenInfo.scope ?? ''
+      if (!scopes.includes('gmail')) {
+        return `\n\n[CONTEXTO GMAIL: Token sem scope gmail. Scopes disponíveis: ${scopes}. O usuário precisa fazer logout e login novamente para conceder acesso ao Gmail.]`
+      }
+    }
+
     // Busca emails recentes — inclui variações sem acento (reuniao, reunião)
     const query = 'newer_than:7d (has:attachment filename:.ics OR subject:reunião OR subject:reuniao OR subject:meeting OR subject:convite OR subject:invite OR subject:call OR subject:sync OR subject:zoom OR subject:teams OR subject:meet)'
     const listRes = await fetch(
@@ -44,7 +54,7 @@ async function fetchGmailContext(providerToken: string): Promise<string> {
     )
     if (!listRes.ok) {
       const errText = await listRes.text().catch(() => '')
-      return `\n\n[CONTEXTO GMAIL: Erro ao acessar Gmail — status ${listRes.status}. Detalhe: ${errText.slice(0, 150)}]`
+      return `\n\n[CONTEXTO GMAIL: Erro ao acessar Gmail — status ${listRes.status}. Detalhe: ${errText.slice(0, 200)}]`
     }
     const listJson = await listRes.json()
     if (!listJson.messages?.length) return '\n\n[CONTEXTO GMAIL: Nenhum convite ou email de reunião encontrado nos últimos 3 dias.]'
