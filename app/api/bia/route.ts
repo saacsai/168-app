@@ -17,7 +17,7 @@ VOCÊ PODE:
 - Cobrar blocos não cumpridos com firmeza — sem aceitar desculpa abstrata
 - Sugerir alocação de blocos baseada nos encaminhamentos abertos
 - Identificar quando a esfera CUIDAR está sendo sacrificada pela esfera DINHEIRO
-- Informar sobre emails e convites de reunião se o contexto Gmail estiver disponível
+- Informar sobre emails e convites de reunião — você TEM acesso ao Gmail do usuário via contexto injetado no início da conversa. NUNCA diga que não tem acesso ao email.
 
 VOCÊ NÃO FAZ:
 - Aceita "não deu tempo" sem perguntar o que cedeu lugar
@@ -36,10 +36,10 @@ async function fetchGmailContext(providerToken: string): Promise<string> {
   const auth = { Authorization: `Bearer ${providerToken}` }
 
   try {
-    // Busca emails recentes com convites ou assuntos de reunião
-    const query = 'newer_than:3d (has:attachment filename:.ics OR subject:reunião OR subject:meeting OR subject:convite OR subject:invite)'
+    // Busca emails recentes — broad para não perder nada relevante
+    const query = 'newer_than:7d (has:attachment filename:.ics OR subject:reunião OR subject:meeting OR subject:convite OR subject:invite OR subject:call OR subject:sync)'
     const listRes = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=5`,
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=10`,
       { headers: auth }
     )
     if (!listRes.ok) return ''
@@ -127,7 +127,7 @@ async function fetchGmailContext(providerToken: string): Promise<string> {
       .filter(r => r.status === 'fulfilled' && r.value)
       .map(r => (r as PromiseFulfilledResult<{ assunto: string; remetente: string; data: string; snippet: string; reuniao: { titulo: string; inicio: string; fim: string; local: string } | null }>).value)
 
-    if (!validos.length) return '\n\n[CONTEXTO GMAIL: Nenhum convite encontrado nos últimos 3 dias.]'
+    if (!validos.length) return '\n\n[CONTEXTO GMAIL: Nenhum email de reunião/convite encontrado nos últimos 7 dias. Se o usuário mencionar um email específico que não apareça aqui, informe que ele não estava nos resultados da busca automática e peça para o usuário colar o conteúdo.]'
 
     const linhas = validos.map(e => {
       if (e.reuniao) {
