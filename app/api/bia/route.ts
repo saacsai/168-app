@@ -44,14 +44,14 @@ function buildGmailTools(auth: GmailAuth): ToolSet {
   return {
     buscar_emails: {
       description: 'Busca emails no Gmail do usuário. Use para encontrar convites de reunião, emails com anexo .ics, ou qualquer email relevante para a agenda.',
-      parameters: {
+      inputSchema: {
         type: 'object',
         properties: {
           query: { type: 'string', description: 'Query Gmail (ex: "has:attachment filename:.ics", "from:fulano@empresa.com", "subject:reunião")' },
           max: { type: 'number', description: 'Máximo de emails a retornar (padrão: 10)' },
         },
         required: ['query'],
-      } as unknown as ToolSet[string]['parameters'],
+      } as unknown as ToolSet[string]['inputSchema'],
       execute: async ({ query, max = 10 }: { query: string; max?: number }) => {
         const listJson = await gmailFetch(
           `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=${max}`,
@@ -87,13 +87,13 @@ function buildGmailTools(auth: GmailAuth): ToolSet {
 
     ler_email: {
       description: 'Lê o conteúdo completo de um email. Se houver anexo .ics (convite de reunião Teams/Zoom/Meet), extrai título, data, horário e link automaticamente.',
-      parameters: {
+      inputSchema: {
         type: 'object',
         properties: {
           email_id: { type: 'string', description: 'ID do email retornado por buscar_emails' },
         },
         required: ['email_id'],
-      } as unknown as ToolSet[string]['parameters'],
+      } as unknown as ToolSet[string]['inputSchema'],
       execute: async ({ email_id }: { email_id: string }) => {
         const msg = await gmailFetch(
           `https://gmail.googleapis.com/gmail/v1/users/me/messages/${email_id}?format=full`,
