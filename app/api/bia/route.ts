@@ -46,10 +46,9 @@ async function fetchGmailContext(providerToken: string): Promise<string> {
       }
     }
 
-    // Busca emails recentes — inclui variações sem acento (reuniao, reunião)
-    const query = 'newer_than:7d (has:attachment filename:.ics OR subject:reunião OR subject:reuniao OR subject:meeting OR subject:convite OR subject:invite OR subject:call OR subject:sync OR subject:zoom OR subject:teams OR subject:meet)'
+    // Busca todos os emails recentes — BIA decide o que é relevante
     const listRes = await fetch(
-      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=10`,
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent('newer_than:3d -category:promotions -category:social')}&maxResults=15`,
       { headers: auth }
     )
     if (!listRes.ok) {
@@ -57,7 +56,7 @@ async function fetchGmailContext(providerToken: string): Promise<string> {
       return `\n\n[CONTEXTO GMAIL: Erro ao acessar Gmail — status ${listRes.status}. Detalhe: ${errText.slice(0, 200)}]`
     }
     const listJson = await listRes.json()
-    if (!listJson.messages?.length) return '\n\n[CONTEXTO GMAIL: Nenhum convite ou email de reunião encontrado nos últimos 3 dias.]'
+    if (!listJson.messages?.length) return '\n\n[CONTEXTO GMAIL: Nenhum email encontrado nos últimos 3 dias (excluindo promoções e redes sociais).]'
 
     // Pega metadados + ICS dos emails encontrados em paralelo
     const emails = await Promise.allSettled(
