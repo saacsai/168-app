@@ -6,10 +6,11 @@ export type TimerState = {
   blocoId: string
   label: string
   esfera: string
-  horaInicio: string   // "HH:MM:SS"
-  horaFim: string      // "HH:MM:SS"
-  duracaoMin: number   // duração total agendada em minutos
-  iniciadoEm: Date     // quando o usuário clicou INICIAR
+  horaInicio: string
+  horaFim: string
+  duracaoMin: number
+  iniciadoEm: Date
+  tipo?: 'bloco' | 'compromisso'
 }
 
 const ESFERA_COR: Record<string, string> = {

@@ -40,6 +40,22 @@ export default function HojePage() {
     })
   }
 
+  function handleIniciarCompromisso(c: CompromissoInfo) {
+    const [hi, mi] = c.hora_inicio.split(':').map(Number)
+    const [hf, mf] = c.hora_fim.split(':').map(Number)
+    const duracaoMin = (hf * 60 + mf) - (hi * 60 + mi)
+    setTimer({
+      blocoId: c.id,
+      label: c.titulo,
+      esfera: 'trabalho',
+      horaInicio: c.hora_inicio,
+      horaFim: c.hora_fim,
+      duracaoMin,
+      iniciadoEm: new Date(),
+      tipo: 'compromisso',
+    })
+  }
+
   async function handleFinalizar() {
     if (!timer) return
 
@@ -54,7 +70,7 @@ export default function HojePage() {
       if (session) {
         const { data } = await supabase.from('execucao_bloco').insert({
           user_id: session.user.id,
-          bloco_fixo_id: timer.blocoId,
+          bloco_fixo_id: timer.tipo === 'compromisso' ? null : timer.blocoId,
           data: new Date().toISOString().slice(0, 10),
           iniciado_em: timer.iniciadoEm.toISOString(),
           finalizado_em: finalizadoEm.toISOString(),
@@ -128,6 +144,8 @@ export default function HojePage() {
       <CompromissoModal
         compromisso={compromissoModal}
         onClose={() => setCompromissoModal(null)}
+        onIniciarTimer={handleIniciarCompromisso}
+        timerAtivo={!!timer}
       />
 
       {/* Modal de bloco */}
