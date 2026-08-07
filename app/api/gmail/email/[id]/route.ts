@@ -50,7 +50,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
     // Extrai partes recursivamente
     type Part = { mimeType: string; filename?: string; body?: { data?: string; attachmentId?: string }; parts?: Part[] }
-    function getParts(payload: Part): Part[] {
+    const getParts = (payload: Part): Part[] => {
       if (!payload.parts) return [payload]
       return payload.parts.flatMap(getParts)
     }
