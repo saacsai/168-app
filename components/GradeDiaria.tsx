@@ -21,6 +21,28 @@ type CalendarEvento = {
   dia_inteiro?: boolean
 }
 
+type Compromisso = {
+  id: string
+  titulo: string
+  tipo: string
+  hora_inicio: string
+  hora_fim: string
+  link?: string
+}
+
+function compromissosParaHora(compromissos: Compromisso[], h: number): Compromisso[] {
+  return compromissos.filter(c => {
+    const ini = minutos(c.hora_inicio)
+    const fim = minutos(c.hora_fim)
+    return ini <= h * 60 + 59 && fim > h * 60
+  })
+}
+
+function isoParaHHMM(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`
+}
+
 function eventosParaHora(eventos: CalendarEvento[], h: number): CalendarEvento[] {
   return eventos.filter(e => {
     const ini = minutos(e.hora_inicio)
@@ -79,6 +101,7 @@ const ROW_HEIGHT = 44
 export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, refreshKey }: Props) {
   const [blocos, setBlocos] = useState<BlocoFixo[]>([])
   const [eventosCalendar, setEventosCalendar] = useState<CalendarEvento[]>([])
+  const [compromissos, setCompromissos] = useState<Compromisso[]>([])
   const [sonoExpanded, setSonoExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [agora, setAgora] = useState(() => new Date())
@@ -107,6 +130,30 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
         .order('hora_inicio')
 
       if (data) setBlocos(data)
+
+      // Busca compromissos avulsos de hoje
+      const agr = new Date()
+      const inicioHoje = new Date(agr.getFullYear(), agr.getMonth(), agr.getDate()).toISOString()
+      const fimHoje = new Date(agr.getFullYear(), agr.getMonth(), agr.getDate() + 1).toISOString()
+      const { data: compData } = await supabase
+        .from('compromissos')
+        .select('id, titulo, tipo, data_hora_inicio, data_hora_fim, link')
+        .eq('user_id', session.user.id)
+        .gte('data_hora_inicio', inicioHoje)
+        .lt('data_hora_inicio', fimHoje)
+        .neq('status', 'cancelado')
+        .order('data_hora_inicio')
+
+      if (compData) {
+        setCompromissos(compData.map(c => ({
+          id: c.id,
+          titulo: c.titulo,
+          tipo: c.tipo,
+          hora_inicio: isoParaHHMM(c.data_hora_inicio),
+          hora_fim: isoParaHHMM(c.data_hora_fim),
+          link: c.link,
+        })))
+      }
 
       // Busca eventos de TODOS os calendários do usuário (primary + secundários)
       const providerToken = session?.provider_token
@@ -249,6 +296,8 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
           const isAtivo = bloco?.id === timerBlocoId
           const eventos = eventosParaHora(eventosCalendar, h)
           const temCalendar = eventos.length > 0
+          const comps = compromissosParaHora(compromissos, h)
+          const temCompromisso = comps.length > 0
 
           function handleClick() {
             if (!bloco || bloco.esfera === 'sono') {
@@ -315,7 +364,16 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
                       📅 {eventos[0].titulo.length > 14 ? eventos[0].titulo.slice(0, 14) + '…' : eventos[0].titulo}
                     </span>
                   )}
-                  {bloco.inegociavel && !temCalendar && (
+                  {temCompromisso && !temCalendar && (
+                    <span
+                      className="ml-auto flex-shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded"
+                      style={{ background: '#ea580c15', color: '#ea580c' }}
+                      title={comps.map(c => c.titulo).join(', ')}
+                    >
+                      🗓 {comps[0].titulo.length > 14 ? comps[0].titulo.slice(0, 14) + '…' : comps[0].titulo}
+                    </span>
+                  )}
+                  {bloco.inegociavel && !temCalendar && !temCompromisso && (
                     <span className="ml-auto flex-shrink-0 text-[9px] text-gray-300 font-medium tracking-wide">
                       FIXO
                     </span>
@@ -335,6 +393,35 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
                   {eventos.length > 1 && (
                     <span className="text-[10px] flex-shrink-0" style={{ color: '#1a73e880' }}>
                       +{eventos.length - 1}
+                    </span>
+                  )}
+                </div>
+              ) : temCompromisso ? (
+                <div
+                  className="flex-1 flex items-center gap-2 px-3 py-2"
+                  style={{ backgroundColor: '#ea580c10', borderLeft: '3px solid #ea580c' }}
+                >
+                  <span className="text-[10px] font-bold tracking-wide flex-shrink-0" style={{ color: '#ea580c' }}>
+                    {comps[0].tipo === 'reuniao' ? 'REUNIÃO' : comps[0].tipo.toUpperCase()}
+                  </span>
+                  <span className="text-xs font-medium truncate" style={{ color: '#ea580c' }}>
+                    {comps[0].titulo}
+                  </span>
+                  {comps[0].link && (
+                    <a
+                      href={comps[0].link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="ml-auto flex-shrink-0 text-[9px] px-1.5 py-0.5 rounded font-medium"
+                      style={{ background: '#ea580c20', color: '#ea580c' }}
+                      onClick={e => e.stopPropagation()}
+                    >
+                      Entrar
+                    </a>
+                  )}
+                  {comps.length > 1 && (
+                    <span className="text-[10px] flex-shrink-0 ml-auto" style={{ color: '#ea580c60' }}>
+                      +{comps.length - 1}
                     </span>
                   )}
                 </div>
