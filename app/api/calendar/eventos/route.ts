@@ -28,7 +28,6 @@ export async function GET(req: NextRequest) {
     }
     const listJson = await listRes.json()
     const calIds: string[] = (listJson.items ?? [])
-      .filter((c: { selected?: boolean }) => c.selected !== false)
       .map((c: { id: string }) => c.id)
 
     // 2. Busca eventos de cada calendário em paralelo
