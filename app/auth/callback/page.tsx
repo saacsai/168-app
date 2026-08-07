@@ -19,6 +19,10 @@ export default function CallbackPage() {
     // Aguarda sessão estabelecida via onAuthStateChange (evita race condition PKCE)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session) {
+        // provider_token só existe neste evento — persistir para uso posterior
+        if (session.provider_token) {
+          localStorage.setItem('provider_token_168', session.provider_token)
+        }
         subscription.unsubscribe()
         window.location.href = next
       }

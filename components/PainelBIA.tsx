@@ -29,10 +29,15 @@ export default function PainelBIA() {
       setNome(primeiroNome)
     }
 
-    // onAuthStateChange captura provider_token mesmo após refresh
+    // onAuthStateChange: provider_token só existe em SIGNED_IN, não em INITIAL_SESSION
+    // Usamos localStorage como ponte (salvo no callback OAuth)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
         applySession(session)
+        if (!session.provider_token) {
+          const stored = localStorage.getItem('provider_token_168')
+          if (stored) setProviderToken(stored)
+        }
       }
     })
 
@@ -110,8 +115,11 @@ export default function PainelBIA() {
       <div className="flex items-center gap-2.5 px-4 py-3 flex-shrink-0" style={{ background: '#1B2A4A' }}>
         <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
         <span className="text-white font-bold text-sm tracking-wide">BIA</span>
-        <span className="text-xs ml-auto" style={{ color: 'rgba(255,255,255,0.35)' }}>
+        <span className="text-xs ml-auto flex items-center gap-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
           168 · Assistente
+          <span title={providerToken ? 'Gmail conectado' : 'Gmail sem token'}>
+            {providerToken ? '📧' : '⬜'}
+          </span>
         </span>
       </div>
 
