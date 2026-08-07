@@ -8,6 +8,7 @@ import TimerAtivo, { type TimerState } from '@/components/TimerAtivo'
 import BlocoModal, { type BlocoParaModal } from '@/components/BlocoModal'
 import NovoBlocoModal from '@/components/NovoBlocoModal'
 import ResumoModal, { type ExecucaoFinalizada } from '@/components/ResumoModal'
+import CompromissoModal, { type CompromissoInfo } from '@/components/CompromissoModal'
 
 type ModalOvertime = {
   label: string
@@ -21,6 +22,7 @@ export default function HojePage() {
   const [execucaoFinalizada, setExecucaoFinalizada] = useState<ExecucaoFinalizada | null>(null)
   const [novoBloco, setNovoBloco] = useState<number | null>(null)
   const [gradeKey, setGradeKey] = useState(0)
+  const [compromissoModal, setCompromissoModal] = useState<CompromissoInfo | null>(null)
 
   const hoje = new Date().toLocaleDateString('pt-BR', {
     weekday: 'long', day: 'numeric', month: 'long',
@@ -98,6 +100,7 @@ export default function HojePage() {
             timerBlocoId={timer?.blocoId}
             onBlocoClick={setModalBloco}
             onSlotClick={setNovoBloco}
+            onCompromissoClick={setCompromissoModal}
             refreshKey={gradeKey}
           />
         </div>
@@ -120,6 +123,11 @@ export default function HojePage() {
       <ResumoModal
         execucao={execucaoFinalizada}
         onClose={handleResumoClose}
+      />
+
+      <CompromissoModal
+        compromisso={compromissoModal}
+        onClose={() => setCompromissoModal(null)}
       />
 
       {/* Modal de bloco */}

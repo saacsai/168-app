@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import { type BlocoParaModal } from './BlocoModal'
+import { type CompromissoInfo } from './CompromissoModal'
 
 type BlocoFixo = {
   id: string
@@ -93,12 +94,13 @@ interface Props {
   timerBlocoId?: string
   onBlocoClick?: (bloco: BlocoParaModal) => void
   onSlotClick?: (hora: number) => void
+  onCompromissoClick?: (c: CompromissoInfo) => void
   refreshKey?: number
 }
 
 const ROW_HEIGHT = 44
 
-export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, refreshKey }: Props) {
+export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, onCompromissoClick, refreshKey }: Props) {
   const [blocos, setBlocos] = useState<BlocoFixo[]>([])
   const [eventosCalendar, setEventosCalendar] = useState<CalendarEvento[]>([])
   const [compromissos, setCompromissos] = useState<Compromisso[]>([])
@@ -400,6 +402,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
                 <div
                   className="flex-1 flex items-center gap-2 px-3 py-2"
                   style={{ backgroundColor: '#ea580c10', borderLeft: '3px solid #ea580c' }}
+                  onClick={e => { e.stopPropagation(); onCompromissoClick?.(comps[0]) }}
                 >
                   <span className="text-[10px] font-bold tracking-wide flex-shrink-0" style={{ color: '#ea580c' }}>
                     {comps[0].tipo === 'reuniao' ? 'REUNIÃO' : comps[0].tipo.toUpperCase()}

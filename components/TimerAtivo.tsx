@@ -65,6 +65,28 @@ export default function TimerAtivo({ timer, onFinalizar }: Props) {
     return () => clearInterval(id)
   }, [timer])
 
+  // Notificações em useEffect — evita disparos no render
+  useEffect(() => {
+    if (!timer) return
+    const restanteMin = timer.duracaoMin - elapsedMin
+    const overtime = restanteMin < 0
+    const alertaLeve = restanteMin <= 10 && restanteMin > 5 && !overtime
+    const alertaForte = restanteMin <= 5 && !overtime
+
+    if (alertaLeve && !alertasDisparados.current.has('10')) {
+      alertasDisparados.current.add('10')
+      notificar('168 · Timer', `${timer.label} — 10 minutos restantes`)
+    }
+    if (alertaForte && !alertasDisparados.current.has('5')) {
+      alertasDisparados.current.add('5')
+      notificar('168 · Timer', `${timer.label} — 5 minutos restantes`)
+    }
+    if (overtime && !alertasDisparados.current.has('overtime')) {
+      alertasDisparados.current.add('overtime')
+      notificar('168 · Timer', `${timer.label} — tempo esgotado`)
+    }
+  }, [elapsedMin, timer])
+
   // Sem timer ativo — placeholder
   if (!timer) {
     return (
@@ -89,21 +111,8 @@ export default function TimerAtivo({ timer, onFinalizar }: Props) {
   const alertaForte = restanteMin <= 5 && !overtime
   const cor = ESFERA_COR[timer.esfera] ?? '#1B2A4A'
 
-  // Disparar notificações nos marcos de tempo
-  if (alertaLeve && !alertasDisparados.current.has('10')) {
-    alertasDisparados.current.add('10')
-    notificar('168 · Timer', `${timer.label} — 10 minutos restantes`)
-  }
-  if (alertaForte && !alertasDisparados.current.has('5')) {
-    alertasDisparados.current.add('5')
-    notificar('168 · Timer', `${timer.label} — 5 minutos restantes`)
-  }
-  if (overtime && !alertasDisparados.current.has('overtime')) {
-    alertasDisparados.current.add('overtime')
-    notificar('168 · Timer', `${timer.label} — tempo esgotado`)
-  }
-
   const borderColor = overtime ? '#dc2626' : alertaForte ? '#f59e0b' : cor
+  const pulsing = alertaForte || overtime
 
   return (
     <div
@@ -135,6 +144,24 @@ export default function TimerAtivo({ timer, onFinalizar }: Props) {
           ■ FINALIZAR
         </button>
       </div>
+
+      {/* Banner de alerta visual — fallback para quando notificação do browser não aparece */}
+      {(alertaForte || overtime) && (
+        <div
+          className="mt-2 px-3 py-1.5 rounded-lg text-xs font-bold text-center animate-pulse"
+          style={{
+            background: overtime ? '#dc262620' : '#f59e0b20',
+            color: overtime ? '#dc2626' : '#d97706',
+          }}
+        >
+          {overtime ? '⏰ TEMPO ESGOTADO — finalize o bloco' : '⚠️ MENOS DE 5 MINUTOS'}
+        </div>
+      )}
+      {alertaLeve && !alertaForte && (
+        <div className="mt-2 px-3 py-1.5 rounded-lg text-xs font-medium text-center" style={{ background: '#fef3c7', color: '#d97706' }}>
+          ⏳ 10 minutos restantes
+        </div>
+      )}
 
       {/* Barra de progresso */}
       <div className="mt-3 h-1.5 rounded-full overflow-hidden" style={{ background: `${cor}20` }}>
