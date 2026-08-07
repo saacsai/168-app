@@ -79,7 +79,6 @@ const ROW_HEIGHT = 44
 export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, refreshKey }: Props) {
   const [blocos, setBlocos] = useState<BlocoFixo[]>([])
   const [eventosCalendar, setEventosCalendar] = useState<CalendarEvento[]>([])
-  const [debugCal, setDebugCal] = useState<string>('aguardando...')
   const [sonoExpanded, setSonoExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [agora, setAgora] = useState(() => new Date())
@@ -96,7 +95,6 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
     async function load() {
       const supabase = getSupabase()
       const { data: { session } } = await supabase.auth.getSession()
-      setDebugCal(`session: ${session ? session.user.email + ' | token: ' + (session.provider_token ? 'sim' : 'nao') : 'null'}`)
       if (!session) { setLoading(false); return }
 
       const hoje = new Date().getDay()
@@ -112,9 +110,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
 
       // Busca eventos de TODOS os calendários do usuário (primary + secundários)
       const providerToken = session?.provider_token
-      if (!providerToken) {
-        setDebugCal('sem provider_token — login Google necessário')
-      } else {
+      if (providerToken) {
         try {
           const res = await fetch('/api/calendar/eventos', {
             headers: {
@@ -122,15 +118,12 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
               'x-tz-offset': String(new Date().getTimezoneOffset()),
             },
           })
-          const json = await res.json()
-          if (!res.ok) {
-            setDebugCal(`${json.error ?? res.status} | ${json.tokenInfo ?? ''}`)
-          } else {
-            setDebugCal(`${json.calendarios} cals · ${json.eventos.length} eventos`)
+          if (res.ok) {
+            const json = await res.json()
             setEventosCalendar(json.eventos)
           }
-        } catch (err) {
-          setDebugCal(`erro fetch: ${err instanceof Error ? err.message : String(err)}`)
+        } catch {
+          // Calendar é opcional — falha silenciosa
         }
       }
 
@@ -164,14 +157,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
           </span>
         </div>
 
-        {/* Debug Calendar — remover depois */}
-        {debugCal && (
-          <div className="mt-1 text-[10px] text-gray-400 font-mono truncate" title={debugCal}>
-            📅 {debugCal}
-          </div>
-        )}
-
-        {/* Legenda de esferas */}
+          {/* Legenda de esferas */}
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5">
           {LEGENDA_ESFERAS.map(e => (
             <span key={e} className="flex items-center gap-1">
