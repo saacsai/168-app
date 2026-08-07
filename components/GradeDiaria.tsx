@@ -170,8 +170,8 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
           }
           setDebugCal(`${calIds.length} cals · ${todos.length} eventos`)
           setEventosCalendar(todos)
-        } catch {
-          // Calendar é opcional — falha silenciosa
+        } catch (err) {
+          setDebugCal(`erro: ${err instanceof Error ? err.message : String(err)}`)
         }
       }
 
