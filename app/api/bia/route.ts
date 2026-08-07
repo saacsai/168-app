@@ -36,8 +36,8 @@ async function fetchGmailContext(providerToken: string): Promise<string> {
   const auth = { Authorization: `Bearer ${providerToken}` }
 
   try {
-    // Busca emails recentes — broad para não perder nada relevante
-    const query = 'newer_than:7d (has:attachment filename:.ics OR subject:reunião OR subject:meeting OR subject:convite OR subject:invite OR subject:call OR subject:sync)'
+    // Busca emails recentes — inclui variações sem acento (reuniao, reunião)
+    const query = 'newer_than:7d (has:attachment filename:.ics OR subject:reunião OR subject:reuniao OR subject:meeting OR subject:convite OR subject:invite OR subject:call OR subject:sync OR subject:zoom OR subject:teams OR subject:meet)'
     const listRes = await fetch(
       `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=10`,
       { headers: auth }
