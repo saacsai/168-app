@@ -5,6 +5,8 @@ export async function GET(req: NextRequest) {
   if (!providerToken) {
     return NextResponse.json({ error: 'sem token' }, { status: 401 })
   }
+  // debug — remover depois
+  const tokenInfo = `len:${providerToken.length} prefix:${providerToken.slice(0, 8)}`
 
   const hoje = new Date()
   const timeMin = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 0, 0, 0).toISOString()
@@ -19,7 +21,7 @@ export async function GET(req: NextRequest) {
     )
     if (!listRes.ok) {
       const txt = await listRes.text()
-      return NextResponse.json({ error: `calendarList ${listRes.status}`, detail: txt }, { status: 502 })
+      return NextResponse.json({ error: `calendarList ${listRes.status}`, detail: txt, tokenInfo }, { status: 502 })
     }
     const listJson = await listRes.json()
     const calIds: string[] = (listJson.items ?? [])

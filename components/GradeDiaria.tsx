@@ -120,7 +120,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
           })
           const json = await res.json()
           if (!res.ok) {
-            setDebugCal(`erro API: ${json.error ?? res.status} | ${json.detail ?? ''}`.slice(0, 120))
+            setDebugCal(`${json.error ?? res.status} | ${json.tokenInfo ?? ''}`)
           } else {
             setDebugCal(`${json.calendarios} cals · ${json.eventos.length} eventos`)
             setEventosCalendar(json.eventos)
