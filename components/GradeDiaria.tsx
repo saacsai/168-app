@@ -100,6 +100,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
     async function load() {
       const supabase = getSupabase()
       const { data: { session } } = await supabase.auth.getSession()
+      setDebugCal(`session: ${session ? session.user.email + ' | token: ' + (session.provider_token ? 'sim' : 'nao') : 'null'}`)
       if (!session) { setLoading(false); return }
 
       const hoje = new Date().getDay()
