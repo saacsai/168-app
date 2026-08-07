@@ -20,11 +20,6 @@ type CalendarEvento = {
   hora_fim: string
 }
 
-function isoToHHMM(iso: string): string {
-  const d = new Date(iso)
-  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-}
-
 function eventosParaHora(eventos: CalendarEvento[], h: number): CalendarEvento[] {
   return eventos.filter(e => {
     const ini = minutos(e.hora_inicio)
@@ -120,58 +115,18 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
         setDebugCal('sem provider_token — login Google necessário')
       } else {
         try {
-          const d = new Date()
-          const timeMin = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).toISOString()
-          const timeMax = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).toISOString()
-          const auth = { headers: { Authorization: `Bearer ${providerToken}` } }
-
-          // 1. Lista todos os calendários visíveis
-          const listRes = await fetch(
-            'https://www.googleapis.com/calendar/v3/calendarList?minAccessRole=reader',
-            auth
-          )
-          if (!listRes.ok) {
-            setDebugCal(`calendarList HTTP ${listRes.status}`)
-            throw new Error('calendarList falhou')
+          const res = await fetch('/api/calendar/eventos', {
+            headers: { 'x-provider-token': providerToken },
+          })
+          const json = await res.json()
+          if (!res.ok) {
+            setDebugCal(`erro API: ${json.error ?? res.status}`)
+          } else {
+            setDebugCal(`${json.calendarios} cals · ${json.eventos.length} eventos`)
+            setEventosCalendar(json.eventos)
           }
-          const listJson = await listRes.json()
-          const calIds: string[] = (listJson.items ?? [])
-            .filter((c: { selected?: boolean }) => c.selected !== false)
-            .map((c: { id: string }) => c.id)
-
-          setDebugCal(`${calIds.length} cals encontrados`)
-
-          // 2. Busca eventos de cada calendário em paralelo
-          const resultados = await Promise.allSettled(
-            calIds.map(calId =>
-              fetch(
-                `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events` +
-                `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=50`,
-                auth
-              ).then(r => r.ok ? r.json() : { items: [] })
-            )
-          )
-
-          // 3. Mescla e deduplica por id
-          const vistos = new Set<string>()
-          const todos: CalendarEvento[] = []
-          for (const r of resultados) {
-            if (r.status !== 'fulfilled') continue
-            for (const e of (r.value.items ?? [])) {
-              if (!e.start?.dateTime || vistos.has(e.id)) continue
-              vistos.add(e.id)
-              todos.push({
-                id: e.id,
-                titulo: e.summary || '(sem título)',
-                hora_inicio: isoToHHMM(e.start.dateTime),
-                hora_fim: isoToHHMM(e.end.dateTime),
-              })
-            }
-          }
-          setDebugCal(`${calIds.length} cals · ${todos.length} eventos`)
-          setEventosCalendar(todos)
         } catch (err) {
-          setDebugCal(`erro: ${err instanceof Error ? err.message : String(err)}`)
+          setDebugCal(`erro fetch: ${err instanceof Error ? err.message : String(err)}`)
         }
       }
 
