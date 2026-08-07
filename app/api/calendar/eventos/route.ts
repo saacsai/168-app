@@ -5,12 +5,15 @@ export async function GET(req: NextRequest) {
   if (!providerToken) {
     return NextResponse.json({ error: 'sem token' }, { status: 401 })
   }
-  // debug — remover depois
-  const tokenInfo = `len:${providerToken.length} prefix:${providerToken.slice(0, 8)}`
 
-  const hoje = new Date()
-  const timeMin = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 0, 0, 0).toISOString()
-  const timeMax = new Date(hoje.getFullYear(), hoje.getMonth(), hoje.getDate(), 23, 59, 59).toISOString()
+  // Usa o offset enviado pelo cliente para garantir o dia certo no fuso do usuário
+  const offsetMin = parseInt(req.headers.get('x-tz-offset') ?? '180', 10) // Brasil = 180 (UTC-3)
+  const agora = new Date()
+  const localMs = agora.getTime() - offsetMin * 60_000
+  const local = new Date(localMs)
+  const timeMin = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), 0, 0, 0) + offsetMin * 60_000).toISOString()
+  const timeMax = new Date(Date.UTC(local.getUTCFullYear(), local.getUTCMonth(), local.getUTCDate(), 23, 59, 59) + offsetMin * 60_000).toISOString()
+
   const auth = { Authorization: `Bearer ${providerToken}` }
 
   try {
@@ -21,7 +24,7 @@ export async function GET(req: NextRequest) {
     )
     if (!listRes.ok) {
       const txt = await listRes.text()
-      return NextResponse.json({ error: `calendarList ${listRes.status}`, detail: txt, tokenInfo }, { status: 502 })
+      return NextResponse.json({ error: `calendarList ${listRes.status}`, detail: txt.slice(0, 200) }, { status: 502 })
     }
     const listJson = await listRes.json()
     const calIds: string[] = (listJson.items ?? [])
@@ -39,23 +42,35 @@ export async function GET(req: NextRequest) {
       )
     )
 
-    // 3. Mescla e deduplica por id
+    // 3. Mescla e deduplica por id (inclui eventos de dia inteiro)
     const vistos = new Set<string>()
-    const eventos: Array<{ id: string; titulo: string; hora_inicio: string; hora_fim: string }> = []
+    const eventos: Array<{ id: string; titulo: string; hora_inicio: string; hora_fim: string; dia_inteiro?: boolean }> = []
 
     for (const r of resultados) {
       if (r.status !== 'fulfilled') continue
       for (const e of (r.value.items ?? [])) {
-        if (!e.start?.dateTime || vistos.has(e.id)) continue
+        if (vistos.has(e.id)) continue
         vistos.add(e.id)
-        const ini = new Date(e.start.dateTime)
-        const fim = new Date(e.end.dateTime)
-        eventos.push({
-          id: e.id,
-          titulo: e.summary || '(sem título)',
-          hora_inicio: `${String(ini.getHours()).padStart(2, '0')}:${String(ini.getMinutes()).padStart(2, '0')}`,
-          hora_fim: `${String(fim.getHours()).padStart(2, '0')}:${String(fim.getMinutes()).padStart(2, '0')}`,
-        })
+
+        if (e.start?.dateTime) {
+          const ini = new Date(e.start.dateTime)
+          const fim = new Date(e.end.dateTime)
+          eventos.push({
+            id: e.id,
+            titulo: e.summary || '(sem título)',
+            hora_inicio: `${String(ini.getHours()).padStart(2, '0')}:${String(ini.getMinutes()).padStart(2, '0')}`,
+            hora_fim: `${String(fim.getHours()).padStart(2, '0')}:${String(fim.getMinutes()).padStart(2, '0')}`,
+          })
+        } else if (e.start?.date) {
+          // Evento de dia inteiro
+          eventos.push({
+            id: e.id,
+            titulo: e.summary || '(sem título)',
+            hora_inicio: '00:00',
+            hora_fim: '23:59',
+            dia_inteiro: true,
+          })
+        }
       }
     }
 

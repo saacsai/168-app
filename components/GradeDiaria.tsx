@@ -18,6 +18,7 @@ type CalendarEvento = {
   titulo: string
   hora_inicio: string
   hora_fim: string
+  dia_inteiro?: boolean
 }
 
 function eventosParaHora(eventos: CalendarEvento[], h: number): CalendarEvento[] {
@@ -116,7 +117,10 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
       } else {
         try {
           const res = await fetch('/api/calendar/eventos', {
-            headers: { 'x-provider-token': providerToken },
+            headers: {
+              'x-provider-token': providerToken,
+              'x-tz-offset': String(new Date().getTimezoneOffset()),
+            },
           })
           const json = await res.json()
           if (!res.ok) {
