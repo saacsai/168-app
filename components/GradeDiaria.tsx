@@ -83,7 +83,7 @@ const ROW_HEIGHT = 44
 export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, refreshKey }: Props) {
   const [blocos, setBlocos] = useState<BlocoFixo[]>([])
   const [eventosCalendar, setEventosCalendar] = useState<CalendarEvento[]>([])
-  const [debugCal, setDebugCal] = useState<string>('')
+  const [debugCal, setDebugCal] = useState<string>('aguardando...')
   const [sonoExpanded, setSonoExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [agora, setAgora] = useState(() => new Date())
