@@ -8,6 +8,7 @@ type Msg = { id: string; role: 'user' | 'assistant'; content: string }
 export default function PainelBIA() {
   const [nome, setNome] = useState('')
   const [token, setToken] = useState('')
+  const [providerToken, setProviderToken] = useState('')
   const [messages, setMessages] = useState<Msg[]>([])
   const [input, setInput] = useState('')
   const [streaming, setStreaming] = useState(false)
@@ -20,6 +21,7 @@ export default function PainelBIA() {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) return
       setToken(session.access_token)
+      if (session.provider_token) setProviderToken(session.provider_token)
       const primeiroNome = (
         session.user.user_metadata?.full_name ||
         session.user.email ||
@@ -57,6 +59,7 @@ export default function PainelBIA() {
         },
         body: JSON.stringify({
           messages: histAtualizado.map(m => ({ role: m.role, content: m.content })),
+          provider_token: providerToken || undefined,
         }),
       })
 

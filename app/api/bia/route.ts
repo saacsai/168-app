@@ -1,8 +1,8 @@
-import { streamText, type ModelMessage } from 'ai'
+import { streamText, tool, jsonSchema, type ModelMessage } from 'ai'
 import { modeloAcao } from '@/lib/ai'
 
 export const runtime = 'nodejs'
-export const maxDuration = 30
+export const maxDuration = 60
 
 const SYSTEM_PROMPT = `Você é a BIA, assistente pessoal do método 168.
 
@@ -17,6 +17,7 @@ VOCÊ PODE:
 - Cobrar blocos não cumpridos com firmeza — sem aceitar desculpa abstrata
 - Sugerir alocação de blocos baseada nos encaminhamentos abertos
 - Identificar quando a esfera CUIDAR está sendo sacrificada pela esfera DINHEIRO
+- Buscar emails e convites de reunião no Gmail do usuário
 
 VOCÊ NÃO FAZ:
 - Aceita "não deu tempo" sem perguntar o que cedeu lugar
@@ -28,15 +29,150 @@ REGRAS DE RESPOSTA:
 - Português direto, sem enrolação
 - Máximo 3 parágrafos por mensagem
 - Se o usuário pedir reorganização de agenda, confirme o que mudou antes de propor
-- Se o usuário mencionar encaminhamento, registre com "📌 Encaminhamento anotado:" antes do item`
+- Se o usuário mencionar encaminhamento, registre com "📌 Encaminhamento anotado:" antes do item
+- Se encontrar convite de reunião (.ics), mostre: título, data, horário e link se houver`
+
+type GmailAuth = { Authorization: string }
+
+async function gmailFetch(url: string, auth: GmailAuth) {
+  const res = await fetch(url, { headers: auth })
+  if (!res.ok) return null
+  return res.json()
+}
 
 export async function POST(req: Request) {
-  const { messages }: { messages: ModelMessage[] } = await req.json()
+  const { messages, provider_token }: { messages: ModelMessage[]; provider_token?: string } = await req.json()
+
+  const auth: GmailAuth | null = provider_token
+    ? { Authorization: `Bearer ${provider_token}` }
+    : null
+
+  const gmailTools = auth ? {
+    buscar_emails: tool({
+      description: 'Busca emails no Gmail do usuário. Use para encontrar convites de reunião, emails com anexo .ics, ou qualquer email relevante para a agenda.',
+      parameters: jsonSchema<{ query: string; max?: number }>({
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Query Gmail (ex: "has:attachment filename:.ics", "from:fulano@empresa.com", "subject:reunião")' },
+          max: { type: 'number', description: 'Máximo de emails a retornar (padrão: 10)' },
+        },
+        required: ['query'],
+      }),
+      execute: async ({ query, max = 10 }: { query: string; max?: number }) => {
+        const listJson = await gmailFetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=${max}`,
+          auth
+        )
+        if (!listJson?.messages?.length) return { emails: [], total: 0 }
+
+        const resultados = await Promise.allSettled(
+          listJson.messages.map((m: { id: string }) =>
+            gmailFetch(
+              `https://gmail.googleapis.com/gmail/v1/users/me/messages/${m.id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Date`,
+              auth
+            )
+          )
+        )
+
+        const emails = resultados
+          .filter(r => r.status === 'fulfilled' && r.value)
+          .map(r => {
+            const msg = (r as PromiseFulfilledResult<{ id: string; payload: { headers: { name: string; value: string }[]; parts?: { filename?: string; mimeType: string }[] }; snippet: string }>).value
+            const h = msg.payload?.headers ?? []
+            const get = (n: string) => h.find((x: { name: string; value: string }) => x.name === n)?.value ?? ''
+            const partes = msg.payload?.parts ?? []
+            const tem_ics = partes.some((p: { filename?: string; mimeType: string }) =>
+              p.filename?.endsWith('.ics') || p.mimeType === 'text/calendar'
+            )
+            return { id: msg.id, assunto: get('Subject'), remetente: get('From'), data: get('Date'), snippet: msg.snippet, tem_ics }
+          })
+
+        return { emails, total: emails.length }
+      },
+    }),
+
+    ler_email: tool({
+      description: 'Lê o conteúdo completo de um email. Se houver anexo .ics (convite de reunião Teams/Zoom/Meet), extrai título, data, horário e link automaticamente.',
+      parameters: jsonSchema<{ email_id: string }>({
+        type: 'object',
+        properties: {
+          email_id: { type: 'string', description: 'ID do email retornado por buscar_emails' },
+        },
+        required: ['email_id'],
+      }),
+      execute: async ({ email_id }: { email_id: string }) => {
+        const msg = await gmailFetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${email_id}?format=full`,
+          auth
+        )
+        if (!msg) return { erro: 'email não encontrado' }
+
+        const h = msg.payload?.headers ?? []
+        const get = (n: string) => h.find((x: { name: string; value: string }) => x.name === n)?.value ?? ''
+
+        type Part = { mimeType: string; filename?: string; body?: { data?: string; attachmentId?: string }; parts?: Part[] }
+        const getParts = (p: Part): Part[] => p.parts ? p.parts.flatMap(getParts) : [p]
+        const partes = getParts(msg.payload)
+
+        const textPart = partes.find((p: Part) => p.mimeType === 'text/plain')
+        const corpo = textPart?.body?.data
+          ? Buffer.from(textPart.body.data, 'base64').toString('utf-8').slice(0, 1500)
+          : ''
+
+        const icsPart = partes.find((p: Part) =>
+          p.filename?.endsWith('.ics') || p.mimeType === 'text/calendar'
+        )
+
+        let reuniao = null
+        if (icsPart) {
+          let icsText = ''
+          if (icsPart.body?.data) {
+            icsText = Buffer.from(icsPart.body.data, 'base64').toString('utf-8')
+          } else if (icsPart.body?.attachmentId) {
+            const att = await gmailFetch(
+              `https://gmail.googleapis.com/gmail/v1/users/me/messages/${email_id}/attachments/${icsPart.body.attachmentId}`,
+              auth
+            )
+            if (att?.data) icsText = Buffer.from(att.data, 'base64url').toString('utf-8')
+          }
+          if (icsText) {
+            const getIcs = (key: string) => {
+              const m = icsText.match(new RegExp(`^${key}[^:]*:(.+)$`, 'm'))
+              return m ? m[1].trim().replace(/\\n/g, '\n').replace(/\\,/g, ',') : ''
+            }
+            const dtToIso = (dt: string) => {
+              const d = dt.replace('Z', '')
+              return d.length === 8
+                ? `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}`
+                : `${d.slice(0,4)}-${d.slice(4,6)}-${d.slice(6,8)}T${d.slice(9,11)}:${d.slice(11,13)}`
+            }
+            reuniao = {
+              titulo: getIcs('SUMMARY'),
+              inicio: dtToIso(getIcs('DTSTART')),
+              fim: dtToIso(getIcs('DTEND')),
+              local: getIcs('LOCATION'),
+              descricao: getIcs('DESCRIPTION').slice(0, 500),
+            }
+          }
+        }
+
+        return {
+          assunto: get('Subject'),
+          remetente: get('From'),
+          data: get('Date'),
+          corpo,
+          reuniao,
+        }
+      },
+    }),
+  } : {}
 
   const result = streamText({
     model: modeloAcao,
     system: SYSTEM_PROMPT,
     messages,
+    tools: gmailTools,
+    maxSteps: 5,
   })
 
   return result.toTextStreamResponse()
