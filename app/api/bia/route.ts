@@ -34,9 +34,11 @@ REGRAS DE RESPOSTA:
 - Se encontrar convite de reunião (.ics), mostre: título, data, horário e link se houver
 
 GMAIL:
-- Você TEM acesso ao Gmail do usuário via ferramenta buscar_gmail
-- Use a ferramenta SEMPRE que o usuário mencionar um email, convite ou reunião específica
-- Não diga que não tem acesso — você tem. Use a ferramenta.`
+- Você TEM acesso ao Gmail do usuário via ferramentas buscar_gmail e responder_email
+- Use buscar_gmail SEMPRE que o usuário mencionar um email, convite ou reunião específica
+- Use responder_email quando o usuário pedir para responder um email — APENAS quando ele confirmar explicitamente o que enviar
+- Não diga que não tem acesso — você tem. Use as ferramentas.
+- Nunca simule ou afirme que enviou um email sem ter chamado a ferramenta responder_email com sucesso`
 
 type GmailPart = {
   mimeType: string
@@ -153,6 +155,61 @@ export async function POST(req: Request) {
             const emails = await fetchEmails(provider_token, query, maxResults)
             if (!emails.length) return { encontrados: 0, emails: [], mensagem: 'Nenhum email encontrado para esta busca.' }
             return { encontrados: emails.length, emails }
+          } catch (e) {
+            return { erro: String(e) }
+          }
+        },
+      }),
+      responder_email: tool({
+        description: 'Responde a um email no Gmail. Só use após o usuário confirmar explicitamente o texto a enviar.',
+        inputSchema: z.object({
+          gmail_message_id: z.string().describe('ID do email retornado por buscar_gmail'),
+          resposta: z.string().describe('Texto exato da resposta a enviar'),
+        }),
+        execute: async ({ gmail_message_id, resposta }) => {
+          try {
+            const auth = { Authorization: `Bearer ${provider_token}` }
+
+            // Busca headers do email original
+            const msgRes = await fetch(
+              `https://gmail.googleapis.com/gmail/v1/users/me/messages/${gmail_message_id}?format=metadata&metadataHeaders=Subject&metadataHeaders=From&metadataHeaders=Message-ID`,
+              { headers: auth }
+            )
+            if (!msgRes.ok) return { erro: `Não consegui buscar o email original: ${msgRes.status}` }
+            const msg = await msgRes.json()
+
+            const h: { name: string; value: string }[] = msg.payload?.headers ?? []
+            const get = (n: string) => h.find(x => x.name === n)?.value ?? ''
+            const subject = get('Subject')
+            const from = get('From')
+            const messageId = get('Message-ID')
+            const threadId = msg.threadId as string
+
+            const reSubject = subject.startsWith('Re:') ? subject : `Re: ${subject}`
+            const rawEmail = [
+              `To: ${from}`,
+              `Subject: ${reSubject}`,
+              ...(messageId ? [`In-Reply-To: ${messageId}`, `References: ${messageId}`] : []),
+              `Content-Type: text/plain; charset=utf-8`,
+              ``,
+              resposta,
+            ].join('\r\n')
+
+            const raw = Buffer.from(rawEmail).toString('base64url')
+
+            const sendRes = await fetch(
+              `https://gmail.googleapis.com/gmail/v1/users/me/messages/send`,
+              {
+                method: 'POST',
+                headers: { ...auth, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ raw, threadId }),
+              }
+            )
+            if (!sendRes.ok) {
+              const err = await sendRes.text().catch(() => '')
+              return { erro: `Falha ao enviar: ${sendRes.status} — ${err.slice(0, 150)}` }
+            }
+            return { enviado: true, para: from, assunto: reSubject, texto: resposta }
           } catch (e) {
             return { erro: String(e) }
           }
