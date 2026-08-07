@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   try {
     // 1. Lista todos os calendários visíveis
     const listRes = await fetch(
-      'https://www.googleapis.com/calendar/v3/users/me/calendarList',
+      'https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader',
       { headers: auth }
     )
     if (!listRes.ok) {
