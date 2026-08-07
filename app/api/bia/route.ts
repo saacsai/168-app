@@ -1,4 +1,4 @@
-import { streamText, tool, type ModelMessage } from 'ai'
+import { streamText, tool, zodSchema, type ModelMessage } from 'ai'
 import { z } from 'zod'
 import { modeloAcao } from '@/lib/ai'
 
@@ -51,10 +51,10 @@ export async function POST(req: Request) {
   const gmailTools = auth ? {
     buscar_emails: tool({
       description: 'Busca emails no Gmail do usuário. Use para encontrar convites de reunião, emails com anexo .ics, ou qualquer email relevante para a agenda.',
-      parameters: z.object({
+      parameters: zodSchema(z.object({
         query: z.string().describe('Query Gmail (ex: "has:attachment filename:.ics", "from:fulano@empresa.com", "subject:reunião")'),
         max: z.number().optional().describe('Máximo de emails a retornar (padrão: 10)'),
-      }),
+      })),
       execute: async ({ query, max = 10 }) => {
         const listJson = await gmailFetch(
           `https://gmail.googleapis.com/gmail/v1/users/me/messages?q=${encodeURIComponent(query)}&maxResults=${max}`,
@@ -90,9 +90,9 @@ export async function POST(req: Request) {
 
     ler_email: tool({
       description: 'Lê o conteúdo completo de um email. Se houver anexo .ics (convite de reunião Teams/Zoom/Meet), extrai título, data, horário e link automaticamente.',
-      parameters: z.object({
+      parameters: zodSchema(z.object({
         email_id: z.string().describe('ID do email retornado por buscar_emails'),
-      }),
+      })),
       execute: async ({ email_id }) => {
         const msg = await gmailFetch(
           `https://gmail.googleapis.com/gmail/v1/users/me/messages/${email_id}?format=full`,
