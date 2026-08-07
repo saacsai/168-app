@@ -83,6 +83,7 @@ const ROW_HEIGHT = 44
 export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, refreshKey }: Props) {
   const [blocos, setBlocos] = useState<BlocoFixo[]>([])
   const [eventosCalendar, setEventosCalendar] = useState<CalendarEvento[]>([])
+  const [debugCal, setDebugCal] = useState<string>('')
   const [sonoExpanded, setSonoExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [agora, setAgora] = useState(() => new Date())
@@ -114,7 +115,9 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
 
       // Busca eventos de TODOS os calendários do usuário (primary + secundários)
       const providerToken = session?.provider_token
-      if (providerToken) {
+      if (!providerToken) {
+        setDebugCal('sem provider_token — login Google necessário')
+      } else {
         try {
           const d = new Date()
           const timeMin = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).toISOString()
@@ -126,11 +129,16 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
             'https://www.googleapis.com/calendar/v3/calendarList?minAccessRole=reader',
             auth
           )
-          if (!listRes.ok) throw new Error('calendarList falhou')
+          if (!listRes.ok) {
+            setDebugCal(`calendarList HTTP ${listRes.status}`)
+            throw new Error('calendarList falhou')
+          }
           const listJson = await listRes.json()
           const calIds: string[] = (listJson.items ?? [])
             .filter((c: { selected?: boolean }) => c.selected !== false)
             .map((c: { id: string }) => c.id)
+
+          setDebugCal(`${calIds.length} cals encontrados`)
 
           // 2. Busca eventos de cada calendário em paralelo
           const resultados = await Promise.allSettled(
@@ -159,6 +167,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
               })
             }
           }
+          setDebugCal(`${calIds.length} cals · ${todos.length} eventos`)
           setEventosCalendar(todos)
         } catch {
           // Calendar é opcional — falha silenciosa
@@ -194,6 +203,13 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
               : `${totalBlocos} bloco${totalBlocos !== 1 ? 's' : ''}`}
           </span>
         </div>
+
+        {/* Debug Calendar — remover depois */}
+        {debugCal && (
+          <div className="mt-1 text-[10px] text-gray-400 font-mono truncate" title={debugCal}>
+            📅 {debugCal}
+          </div>
+        )}
 
         {/* Legenda de esferas */}
         <div className="flex flex-wrap gap-x-3 gap-y-1 mt-2.5">
