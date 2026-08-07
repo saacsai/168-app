@@ -112,30 +112,54 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
 
       if (data) setBlocos(data)
 
-      // Busca eventos do Google Calendar se o usuário logou com Google
+      // Busca eventos de TODOS os calendários do usuário (primary + secundários)
       const providerToken = session?.provider_token
       if (providerToken) {
         try {
           const d = new Date()
           const timeMin = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).toISOString()
           const timeMax = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).toISOString()
-          const res = await fetch(
-            `https://www.googleapis.com/calendar/v3/calendars/primary/events` +
-            `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=50`,
-            { headers: { Authorization: `Bearer ${providerToken}` } }
+          const auth = { headers: { Authorization: `Bearer ${providerToken}` } }
+
+          // 1. Lista todos os calendários visíveis
+          const listRes = await fetch(
+            'https://www.googleapis.com/calendar/v3/calendarList?minAccessRole=reader',
+            auth
           )
-          if (res.ok) {
-            const json = await res.json()
-            const eventos: CalendarEvento[] = (json.items ?? [])
-              .filter((e: { start?: { dateTime?: string } }) => e.start?.dateTime)
-              .map((e: { id: string; summary?: string; start: { dateTime: string }; end: { dateTime: string } }) => ({
+          if (!listRes.ok) throw new Error('calendarList falhou')
+          const listJson = await listRes.json()
+          const calIds: string[] = (listJson.items ?? [])
+            .filter((c: { selected?: boolean }) => c.selected !== false)
+            .map((c: { id: string }) => c.id)
+
+          // 2. Busca eventos de cada calendário em paralelo
+          const resultados = await Promise.allSettled(
+            calIds.map(calId =>
+              fetch(
+                `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(calId)}/events` +
+                `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=50`,
+                auth
+              ).then(r => r.ok ? r.json() : { items: [] })
+            )
+          )
+
+          // 3. Mescla e deduplica por id
+          const vistos = new Set<string>()
+          const todos: CalendarEvento[] = []
+          for (const r of resultados) {
+            if (r.status !== 'fulfilled') continue
+            for (const e of (r.value.items ?? [])) {
+              if (!e.start?.dateTime || vistos.has(e.id)) continue
+              vistos.add(e.id)
+              todos.push({
                 id: e.id,
                 titulo: e.summary || '(sem título)',
                 hora_inicio: isoToHHMM(e.start.dateTime),
                 hora_fim: isoToHHMM(e.end.dateTime),
-              }))
-            setEventosCalendar(eventos)
+              })
+            }
           }
+          setEventosCalendar(todos)
         } catch {
           // Calendar é opcional — falha silenciosa
         }
