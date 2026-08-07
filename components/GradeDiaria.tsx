@@ -13,6 +13,26 @@ type BlocoFixo = {
   inegociavel: boolean
 }
 
+type CalendarEvento = {
+  id: string
+  titulo: string
+  hora_inicio: string
+  hora_fim: string
+}
+
+function isoToHHMM(iso: string): string {
+  const d = new Date(iso)
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
+function eventosParaHora(eventos: CalendarEvento[], h: number): CalendarEvento[] {
+  return eventos.filter(e => {
+    const ini = minutos(e.hora_inicio)
+    const fim = minutos(e.hora_fim)
+    return ini <= h * 60 + 59 && fim > h * 60
+  })
+}
+
 function duracaoMin(horaInicio: string, horaFim: string): number {
   const [hi, mi] = horaInicio.split(':').map(Number)
   const [hf, mf] = horaFim.split(':').map(Number)
@@ -62,6 +82,7 @@ const ROW_HEIGHT = 44
 
 export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, refreshKey }: Props) {
   const [blocos, setBlocos] = useState<BlocoFixo[]>([])
+  const [eventosCalendar, setEventosCalendar] = useState<CalendarEvento[]>([])
   const [sonoExpanded, setSonoExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [agora, setAgora] = useState(() => new Date())
@@ -90,6 +111,36 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
         .order('hora_inicio')
 
       if (data) setBlocos(data)
+
+      // Busca eventos do Google Calendar se o usuário logou com Google
+      const providerToken = session?.provider_token
+      if (providerToken) {
+        try {
+          const d = new Date()
+          const timeMin = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0).toISOString()
+          const timeMax = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59).toISOString()
+          const res = await fetch(
+            `https://www.googleapis.com/calendar/v3/calendars/primary/events` +
+            `?timeMin=${timeMin}&timeMax=${timeMax}&singleEvents=true&orderBy=startTime&maxResults=50`,
+            { headers: { Authorization: `Bearer ${providerToken}` } }
+          )
+          if (res.ok) {
+            const json = await res.json()
+            const eventos: CalendarEvento[] = (json.items ?? [])
+              .filter((e: { start?: { dateTime?: string } }) => e.start?.dateTime)
+              .map((e: { id: string; summary?: string; start: { dateTime: string }; end: { dateTime: string } }) => ({
+                id: e.id,
+                titulo: e.summary || '(sem título)',
+                hora_inicio: isoToHHMM(e.start.dateTime),
+                hora_fim: isoToHHMM(e.end.dateTime),
+              }))
+            setEventosCalendar(eventos)
+          }
+        } catch {
+          // Calendar é opcional — falha silenciosa
+        }
+      }
+
       setLoading(false)
     }
     load()
@@ -210,6 +261,8 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
           const cfg = bloco ? (ESFERA[bloco.esfera] ?? null) : null
           const isNow = h === horaAtual
           const isAtivo = bloco?.id === timerBlocoId
+          const eventos = eventosParaHora(eventosCalendar, h)
+          const temCalendar = eventos.length > 0
 
           function handleClick() {
             if (!bloco || bloco.esfera === 'sono') {
@@ -230,7 +283,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
           return (
             <div
               key={h}
-              className={`group flex items-stretch ${bloco && bloco.esfera !== 'sono' ? 'cursor-pointer' : 'cursor-pointer'}`}
+              className="group flex items-stretch cursor-pointer"
               style={{
                 height: `${ROW_HEIGHT}px`,
                 borderLeft: isNow ? '3px solid #1B2A4A' : '3px solid transparent',
@@ -258,22 +311,44 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, r
                   style={{
                     backgroundColor: isAtivo ? cfg.cor + '28' : cfg.cor + '18',
                     borderLeft: `3px solid ${cfg.cor}`,
-                    opacity: 1,
                   }}
                 >
                   {isAtivo && (
                     <div className="w-1.5 h-1.5 rounded-full animate-pulse flex-shrink-0" style={{ background: cfg.cor }} />
                   )}
-                  <span
-                    className="text-[10px] font-bold tracking-wide flex-shrink-0"
-                    style={{ color: cfg.cor }}
-                  >
+                  <span className="text-[10px] font-bold tracking-wide flex-shrink-0" style={{ color: cfg.cor }}>
                     {cfg.nome}
                   </span>
                   <span className="text-xs text-gray-700 truncate">{bloco.label}</span>
-                  {bloco.inegociavel && (
+                  {temCalendar && (
+                    <span
+                      className="ml-auto flex-shrink-0 text-[9px] font-medium px-1.5 py-0.5 rounded"
+                      style={{ background: '#1a73e815', color: '#1a73e8' }}
+                      title={eventos.map(e => e.titulo).join(', ')}
+                    >
+                      📅 {eventos[0].titulo.length > 14 ? eventos[0].titulo.slice(0, 14) + '…' : eventos[0].titulo}
+                    </span>
+                  )}
+                  {bloco.inegociavel && !temCalendar && (
                     <span className="ml-auto flex-shrink-0 text-[9px] text-gray-300 font-medium tracking-wide">
                       FIXO
+                    </span>
+                  )}
+                </div>
+              ) : temCalendar ? (
+                <div
+                  className="flex-1 flex items-center gap-2 px-3 py-2"
+                  style={{ backgroundColor: '#1a73e812', borderLeft: '3px solid #1a73e8' }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="#1a73e8" className="flex-shrink-0">
+                    <path d="M19 3h-1V1h-2v2H8V1H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11zM7 10h5v5H7z"/>
+                  </svg>
+                  <span className="text-xs font-medium truncate" style={{ color: '#1a73e8' }}>
+                    {eventos[0].titulo}
+                  </span>
+                  {eventos.length > 1 && (
+                    <span className="text-[10px] flex-shrink-0" style={{ color: '#1a73e880' }}>
+                      +{eventos.length - 1}
                     </span>
                   )}
                 </div>
