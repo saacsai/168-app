@@ -145,7 +145,9 @@ async function fetchGmailContext(providerToken: string): Promise<string> {
 export async function POST(req: Request) {
   const { messages, provider_token }: { messages: ModelMessage[]; provider_token?: string } = await req.json()
 
-  const gmailContext = provider_token ? await fetchGmailContext(provider_token) : ''
+  const gmailContext = provider_token
+    ? await fetchGmailContext(provider_token)
+    : '\n\n[CONTEXTO GMAIL: provider_token não enviado — usuário não fez login com Google ou token não disponível na sessão.]'
 
   const systemPrompt = SYSTEM_PROMPT_BASE + gmailContext
 
