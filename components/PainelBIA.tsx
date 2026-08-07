@@ -16,10 +16,9 @@ export default function PainelBIA() {
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    async function init() {
-      const supabase = getSupabase()
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) return
+    const supabase = getSupabase()
+
+    function applySession(session: import('@supabase/supabase-js').Session) {
       setToken(session.access_token)
       if (session.provider_token) setProviderToken(session.provider_token)
       const primeiroNome = (
@@ -29,7 +28,15 @@ export default function PainelBIA() {
       ).split(' ')[0]
       setNome(primeiroNome)
     }
-    init()
+
+    // onAuthStateChange captura provider_token mesmo após refresh
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if ((event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
+        applySession(session)
+      }
+    })
+
+    return () => subscription.unsubscribe()
   }, [])
 
   useEffect(() => {
