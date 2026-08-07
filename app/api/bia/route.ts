@@ -1,6 +1,7 @@
 import { streamText, tool, isStepCount, type ModelMessage } from 'ai'
 import { z } from 'zod'
 import { modeloAcao } from '@/lib/ai'
+import { getSupabaseWithToken } from '@/lib/supabase'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -13,18 +14,20 @@ O método 168 parte de uma premissa: disciplina é a espinha dorsal de tudo.
 Sua função principal: ajudar o usuário a gerir as 168h semanais com disciplina real — não motivação vazia.
 
 VOCÊ PODE:
-- Reorganizar a agenda quando o usuário informa mudanças (reunião nova, imprevisto)
+- Reorganizar a agenda quando o usuário informa mudanças (compromisso novo, imprevisto)
 - Registrar encaminhamentos e action items com clareza
 - Cobrar blocos não cumpridos com firmeza — sem aceitar desculpa abstrata
 - Sugerir alocação de blocos baseada nos encaminhamentos abertos
 - Identificar quando a esfera CUIDAR está sendo sacrificada pela esfera DINHEIRO
-- Buscar emails e convites de reunião no Gmail do usuário com a ferramenta buscar_gmail
+- Buscar emails e convites no Gmail do usuário com a ferramenta buscar_gmail
+- Criar compromissos na agenda 168 com a ferramenta criar_compromisso
 
 VOCÊ NÃO FAZ:
 - Aceita "não deu tempo" sem perguntar o que cedeu lugar
 - Trata compromisso consigo mesmo como menos importante que compromisso com outros
 - Sugere mais de 3 mudanças de grade de uma vez
 - Usa linguagem corporativa ou motivacional genérica
+- Afirma que adicionou algo à agenda sem ter chamado criar_compromisso com sucesso
 
 REGRAS DE RESPOSTA:
 - Português direto, sem enrolação
@@ -32,6 +35,11 @@ REGRAS DE RESPOSTA:
 - Se o usuário pedir reorganização de agenda, confirme o que mudou antes de propor
 - Se o usuário mencionar encaminhamento, registre com "📌 Encaminhamento anotado:" antes do item
 - Se encontrar convite de reunião (.ics), mostre: título, data, horário e link se houver
+
+AGENDA — REGRA INEGOCIÁVEL:
+- NUNCA crie um compromisso sem ter data_hora_inicio E data_hora_fim confirmados
+- Se o usuário informar só o início, SEMPRE pergunte: "Qual é o horário de término?"
+- Sem horário de fim, não há bloco. Bloco sem fim não existe na grade 168h.
 
 GMAIL:
 - Você TEM acesso ao Gmail do usuário via ferramentas buscar_gmail e responder_email
@@ -137,13 +145,14 @@ async function fetchEmails(providerToken: string, query: string, maxResults: num
 
 export async function POST(req: Request) {
   const { messages, provider_token }: { messages: ModelMessage[]; provider_token?: string } = await req.json()
+  const accessToken = req.headers.get('authorization')?.replace('Bearer ', '') ?? ''
 
   const result = streamText({
     model: modeloAcao,
     system: SYSTEM_PROMPT,
     messages,
     stopWhen: isStepCount(3),
-    tools: provider_token ? {
+    tools: {
       buscar_gmail: tool({
         description: 'Busca emails do Gmail do usuário. Use para encontrar emails específicos, convites de reunião (.ics) ou mensagens recentes.',
         inputSchema: z.object({
@@ -151,6 +160,7 @@ export async function POST(req: Request) {
           maxResults: z.number().optional().describe('Máximo de emails (padrão: 10)'),
         }),
         execute: async ({ query, maxResults = 10 }) => {
+          if (!provider_token) return { erro: 'Gmail não conectado — faça login com Google' }
           try {
             const emails = await fetchEmails(provider_token, query, maxResults)
             if (!emails.length) return { encontrados: 0, emails: [], mensagem: 'Nenhum email encontrado para esta busca.' }
@@ -167,6 +177,7 @@ export async function POST(req: Request) {
           resposta: z.string().describe('Texto exato da resposta a enviar'),
         }),
         execute: async ({ gmail_message_id, resposta }) => {
+          if (!provider_token) return { erro: 'Gmail não conectado — faça login com Google' }
           try {
             const auth = { Authorization: `Bearer ${provider_token}` }
 
@@ -215,7 +226,54 @@ export async function POST(req: Request) {
           }
         },
       }),
-    } : undefined,
+      criar_compromisso: tool({
+        description: 'Cria um compromisso avulso na agenda 168h (reunião, consulta, viagem, etc.). Só use quando data_hora_inicio E data_hora_fim estiverem confirmados pelo usuário.',
+        inputSchema: z.object({
+          titulo: z.string().describe('Nome do compromisso'),
+          tipo: z.enum(['reuniao', 'consulta', 'compromisso', 'tarefa', 'deslocamento', 'outro']).describe('Tipo do compromisso'),
+          data_hora_inicio: z.string().describe('ISO 8601 com timezone. Ex: 2026-08-10T14:00:00-03:00'),
+          data_hora_fim: z.string().describe('ISO 8601 com timezone. Ex: 2026-08-10T15:00:00-03:00'),
+          descricao: z.string().optional().describe('Detalhes adicionais'),
+          local: z.string().optional().describe('Local ou "online"'),
+          link: z.string().optional().describe('URL da reunião se online'),
+          contatos: z.array(z.string()).optional().describe('Participantes (nomes ou emails)'),
+          origem: z.enum(['bia', 'gmail', 'whatsapp', 'manual']).optional().describe('Como chegou ao 168'),
+          email_thread_id: z.string().optional().describe('ID do email de origem se vier do Gmail'),
+        }),
+        execute: async (dados) => {
+          if (!accessToken) return { erro: 'Usuário não autenticado' }
+          try {
+            const supabase = getSupabaseWithToken(accessToken)
+            const { data: { user } } = await supabase.auth.getUser()
+            if (!user) return { erro: 'Sessão expirada' }
+
+            const { data, error } = await supabase
+              .from('compromissos')
+              .insert({
+                user_id: user.id,
+                tipo: dados.tipo,
+                titulo: dados.titulo,
+                descricao: dados.descricao,
+                data_hora_inicio: dados.data_hora_inicio,
+                data_hora_fim: dados.data_hora_fim,
+                local: dados.local,
+                link: dados.link,
+                contatos: dados.contatos,
+                origem: dados.origem ?? 'bia',
+                email_thread_id: dados.email_thread_id,
+                status: 'agendado',
+              })
+              .select('id')
+              .single()
+
+            if (error) return { erro: error.message }
+            return { criado: true, id: data.id, titulo: dados.titulo, inicio: dados.data_hora_inicio, fim: dados.data_hora_fim }
+          } catch (e) {
+            return { erro: String(e) }
+          }
+        },
+      }),
+    },
   })
 
   return result.toTextStreamResponse()
