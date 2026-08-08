@@ -93,7 +93,6 @@ function blocoParaHora(blocos: BlocoFixo[], h: number): BlocoFixo | null {
 }
 
 // Horas visíveis: 06h-23h (são é mostrado colapsado no topo)
-const HORA_INICIO_GRADE = 0
 const HORAS_GRADE = Array.from({ length: 24 }, (_, i) => i)
 
 interface Props {

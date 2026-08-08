@@ -30,7 +30,6 @@ type Compromisso = {
 
 // ─── constantes ──────────────────────────────────────────────────────────────
 
-const HORA_INI = 0
 const HORAS = Array.from({ length: 24 }, (_, i) => i) // 0 → 23
 const ROW_H = 36 // px por hora
 const COL_DIA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']

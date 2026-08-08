@@ -53,7 +53,7 @@ export default function TimerAtivo({ timer, onFinalizar }: Props) {
     if ('Notification' in window && Notification.permission === 'default') {
       Notification.requestPermission()
     }
-  }, [timer?.blocoId])
+  }, [timer?.blocoId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!timer) { setElapsedMin(0); return }
