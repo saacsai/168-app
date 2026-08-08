@@ -68,7 +68,7 @@ const ESFERA: Record<string, { cor: string; nome: string }> = {
 }
 
 const LEGENDA_ESFERAS = [
-  'cuidar_mim', 'trabalho', 'cuidar_familia', 'patrimonio', 'ocio_criativo',
+  'sono', 'cuidar_mim', 'trabalho', 'cuidar_familia', 'patrimonio', 'ocio_criativo',
 ]
 
 function minutos(t: string): number {
@@ -87,8 +87,8 @@ function blocoParaHora(blocos: BlocoFixo[], h: number): BlocoFixo | null {
 }
 
 // Horas visíveis: 06h-23h (são é mostrado colapsado no topo)
-const HORA_INICIO_GRADE = 6
-const HORAS_GRADE = Array.from({ length: 24 - HORA_INICIO_GRADE }, (_, i) => i + HORA_INICIO_GRADE)
+const HORA_INICIO_GRADE = 0
+const HORAS_GRADE = Array.from({ length: 24 }, (_, i) => i)
 
 interface Props {
   timerBlocoId?: string
@@ -104,7 +104,6 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, o
   const [blocos, setBlocos] = useState<BlocoFixo[]>([])
   const [eventosCalendar, setEventosCalendar] = useState<CalendarEvento[]>([])
   const [compromissos, setCompromissos] = useState<Compromisso[]>([])
-  const [sonoExpanded, setSonoExpanded] = useState(false)
   const [loading, setLoading] = useState(true)
   const [agora, setAgora] = useState(() => new Date())
 
@@ -189,7 +188,6 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, o
     )
   }
 
-  const blocosSono = blocos.filter(b => b.esfera === 'sono')
   const totalBlocos = blocos.filter(b => b.esfera !== 'sono').length
 
   return (
@@ -220,71 +218,14 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, o
         </div>
       </div>
 
-      {/* Bloco SONO colapsado (00h → 06h) */}
-      <button
-        onClick={() => setSonoExpanded(v => !v)}
-        className="w-full flex items-center gap-3 px-4 py-2.5 text-left hover:bg-gray-50 transition-colors"
-        style={{ borderLeft: '3px solid #37415140', borderBottom: '1px solid #f3f4f6' }}
-      >
-        <span className="text-xs font-mono text-gray-300 w-8">00h</span>
-        <span
-          className="text-[10px] font-bold tracking-wide"
-          style={{ color: '#374151' }}
-        >
-          SONO
-        </span>
-        <span className="text-xs text-gray-400">
-          {blocosSono.length > 0
-            ? `${blocosSono[0].label} · 8h`
-            : '22h → 06h · 8 horas'}
-        </span>
-        <span className="ml-auto text-gray-300 text-xs">
-          {sonoExpanded ? '▴' : '▾'}
-        </span>
-      </button>
-
-      {/* Horas de sono expandidas */}
-      {sonoExpanded && (
-        <div className="divide-y divide-gray-50">
-          {Array.from({ length: HORA_INICIO_GRADE }, (_, h) => {
-            const bloco = blocoParaHora(blocos, h)
-            const cfg = bloco ? (ESFERA[bloco.esfera] ?? null) : null
-            return (
-              <div key={h} className="flex items-stretch" style={{ minHeight: '36px' }}>
-                <div className="flex items-center w-12 flex-shrink-0 px-3">
-                  <span className="text-xs font-mono text-gray-200">
-                    {String(h).padStart(2, '0')}h
-                  </span>
-                </div>
-                {cfg && bloco ? (
-                  <div
-                    className="flex-1 flex items-center gap-2 px-3 py-1.5"
-                    style={{ backgroundColor: cfg.cor + '12', borderLeft: `3px solid ${cfg.cor}` }}
-                  >
-                    <span className="text-[10px] font-bold tracking-wide" style={{ color: cfg.cor }}>
-                      {cfg.nome}
-                    </span>
-                    <span className="text-xs text-gray-500 truncate">{bloco.label}</span>
-                  </div>
-                ) : (
-                  <div className="flex-1 px-3 py-1.5" style={{ borderLeft: '3px solid transparent' }}>
-                    <span className="text-xs" style={{ color: '#e5e7eb' }}>sono</span>
-                  </div>
-                )}
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Grade principal: 06h → 23h */}
+      {/* Grade: 00h → 23h */}
       <div className="divide-y divide-gray-50 relative">
 
         {/* Indicador de hora atual */}
-        {horaAtual >= HORA_INICIO_GRADE && horaAtual < 24 && (
+        {horaAtual < 24 && (
           <div
             className="absolute left-0 right-0 z-10 flex items-center pointer-events-none"
-            style={{ top: `${(horaAtual - HORA_INICIO_GRADE) * ROW_HEIGHT + (minutoAtual / 60) * ROW_HEIGHT}px` }}
+            style={{ top: `${horaAtual * ROW_HEIGHT + (minutoAtual / 60) * ROW_HEIGHT}px` }}
           >
             <div className="w-2 h-2 rounded-full flex-shrink-0 ml-1" style={{ background: '#ef4444' }} />
             <div className="flex-1 h-px" style={{ background: '#ef4444' }} />

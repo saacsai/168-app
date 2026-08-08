@@ -30,8 +30,8 @@ type Compromisso = {
 
 // ─── constantes ──────────────────────────────────────────────────────────────
 
-const HORA_INI = 6
-const HORAS = Array.from({ length: 18 }, (_, i) => i + HORA_INI) // 6 → 23
+const HORA_INI = 0
+const HORAS = Array.from({ length: 24 }, (_, i) => i) // 0 → 23
 const ROW_H = 36 // px por hora
 const COL_DIA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
 
@@ -45,12 +45,12 @@ const ESFERA_COR: Record<string, string> = {
 }
 
 const LEGENDA = [
+  { key: 'sono',           label: 'SONO' },
   { key: 'cuidar_mim',     label: 'CUIDAR MIM' },
   { key: 'trabalho',       label: 'TRABALHO' },
   { key: 'cuidar_familia', label: 'FAMÍLIA' },
   { key: 'patrimonio',     label: 'PATRIMÔNIO' },
   { key: 'ocio_criativo',  label: 'ÓCIO' },
-  { key: 'sono',           label: 'SONO' },
 ]
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
