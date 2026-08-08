@@ -76,14 +76,20 @@ function minutos(t: string): number {
   return h * 60 + (m || 0)
 }
 
+function blocoNaHoraH(b: BlocoFixo, h: number): boolean {
+  const ini = minutos(b.hora_inicio)
+  const fim = minutos(b.hora_fim)
+  if (fim > ini) {
+    // bloco normal (mesmo dia)
+    return ini <= h * 60 + 59 && fim > h * 60
+  } else {
+    // bloco overnight (ex: 22h→06h): ocupa h>=ini OU h<fim
+    return h * 60 >= ini || (h + 1) * 60 <= fim
+  }
+}
+
 function blocoParaHora(blocos: BlocoFixo[], h: number): BlocoFixo | null {
-  return (
-    blocos.find(b => {
-      const ini = minutos(b.hora_inicio)
-      const fim = minutos(b.hora_fim)
-      return ini <= h * 60 + 59 && fim > h * 60
-    }) ?? null
-  )
+  return blocos.find(b => blocoNaHoraH(b, h)) ?? null
 }
 
 // Horas visíveis: 06h-23h (são é mostrado colapsado no topo)

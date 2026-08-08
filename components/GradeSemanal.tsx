@@ -81,12 +81,21 @@ function diasDaSemana(ini: Date): Date[] {
   })
 }
 
+function blocoNaHoraH(b: BlocoFixo, h: number): boolean {
+  const ini = min(b.hora_inicio)
+  const fim = min(b.hora_fim)
+  if (fim > ini) {
+    return ini <= h * 60 + 59 && fim > h * 60
+  } else {
+    // overnight (ex: 22h→06h)
+    return h * 60 >= ini || (h + 1) * 60 <= fim
+  }
+}
+
 function blocoNaHora(blocos: BlocoFixo[], diaSemana: number, h: number): BlocoFixo | null {
   return blocos.find(b => {
     if (!b.dias_semana.includes(diaSemana)) return false
-    const ini = min(b.hora_inicio)
-    const fim = min(b.hora_fim)
-    return ini <= h * 60 + 59 && fim > h * 60
+    return blocoNaHoraH(b, h)
   }) ?? null
 }
 
