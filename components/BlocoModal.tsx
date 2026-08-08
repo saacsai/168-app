@@ -93,45 +93,90 @@ export default function BlocoModal({ bloco, timer, onIniciar, onFinalizar, onClo
         {/* Corpo */}
         <div className="px-5 py-4 space-y-3">
 
-          {/* Estado: ativo */}
-          {esteEstaAtivo && (
-            <div
-              className="flex items-center gap-2 px-3 py-2 rounded-xl"
-              style={{ background: cfg.cor + '10' }}
-            >
-              <div className="w-2 h-2 rounded-full animate-pulse flex-shrink-0" style={{ background: cfg.cor }} />
-              <span className="text-xs font-semibold" style={{ color: cfg.cor }}>Em andamento</span>
-            </div>
-          )}
+          {bloco.esfera === 'sono' ? (
+            /* ── Sono: fluxo específico ── */
+            <>
+              {!esteEstaAtivo && (
+                <p className="text-xs text-gray-500">
+                  O sono é um bloco de recuperação. Registrar o início ajuda a calcular suas horas reais de descanso.
+                </p>
+              )}
 
-          {/* Estado: outro bloco ativo */}
-          {outroEstaAtivo && (
-            <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
-              <span className="text-xs text-amber-700">
-                <span className="font-semibold">{timer!.label}</span> está em andamento.
-                Finalize antes de iniciar este bloco.
-              </span>
-            </div>
-          )}
+              {esteEstaAtivo && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl" style={{ background: '#37415115' }}>
+                  <span className="text-base">💤</span>
+                  <span className="text-xs font-semibold text-gray-700">Sono em andamento</span>
+                </div>
+              )}
 
-          {/* Botão principal */}
-          {esteEstaAtivo ? (
-            <button
-              onClick={() => { onFinalizar(); onClose() }}
-              className="w-full py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90"
-              style={{ background: '#dc2626' }}
-            >
-              ■ Finalizar bloco
-            </button>
+              {outroEstaAtivo && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
+                  <span className="text-xs text-amber-700">
+                    <span className="font-semibold">{timer!.label}</span> está em andamento. Finalize antes de iniciar o sono.
+                  </span>
+                </div>
+              )}
+
+              {esteEstaAtivo ? (
+                <button
+                  onClick={() => { onFinalizar(); onClose() }}
+                  className="w-full py-3 rounded-xl text-sm font-bold text-white"
+                  style={{ background: '#374151' }}
+                >
+                  ☀ Finalizar sono
+                </button>
+              ) : (
+                <button
+                  onClick={() => { onIniciar(bloco); onClose() }}
+                  disabled={outroEstaAtivo}
+                  className="w-full py-3 rounded-xl text-sm font-bold text-white disabled:opacity-40"
+                  style={{ background: '#374151' }}
+                >
+                  💤 Iniciar sono
+                </button>
+              )}
+            </>
           ) : (
-            <button
-              onClick={() => { onIniciar(bloco); onClose() }}
-              disabled={outroEstaAtivo}
-              className="w-full py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
-              style={{ background: cfg.cor }}
-            >
-              ▶ Iniciar bloco
-            </button>
+            /* ── Blocos normais ── */
+            <>
+              {esteEstaAtivo && (
+                <div
+                  className="flex items-center gap-2 px-3 py-2 rounded-xl"
+                  style={{ background: cfg.cor + '10' }}
+                >
+                  <div className="w-2 h-2 rounded-full animate-pulse flex-shrink-0" style={{ background: cfg.cor }} />
+                  <span className="text-xs font-semibold" style={{ color: cfg.cor }}>Em andamento</span>
+                </div>
+              )}
+
+              {outroEstaAtivo && (
+                <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-amber-50 border border-amber-100">
+                  <span className="text-xs text-amber-700">
+                    <span className="font-semibold">{timer!.label}</span> está em andamento.
+                    Finalize antes de iniciar este bloco.
+                  </span>
+                </div>
+              )}
+
+              {esteEstaAtivo ? (
+                <button
+                  onClick={() => { onFinalizar(); onClose() }}
+                  className="w-full py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90"
+                  style={{ background: '#dc2626' }}
+                >
+                  ■ Finalizar bloco
+                </button>
+              ) : (
+                <button
+                  onClick={() => { onIniciar(bloco); onClose() }}
+                  disabled={outroEstaAtivo}
+                  className="w-full py-3 rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-40"
+                  style={{ background: cfg.cor }}
+                >
+                  ▶ Iniciar bloco
+                </button>
+              )}
+            </>
           )}
         </div>
       </div>

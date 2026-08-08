@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getSupabase } from '@/lib/supabase'
 import GradeDiaria from '@/components/GradeDiaria'
 import PainelBIA from '@/components/PainelBIA'
@@ -10,9 +10,36 @@ import NovoBlocoModal from '@/components/NovoBlocoModal'
 import ResumoModal, { type ExecucaoFinalizada } from '@/components/ResumoModal'
 import CompromissoModal, { type CompromissoInfo } from '@/components/CompromissoModal'
 
+const SONO_KEY = 'sono_ativo_168'
+
+type SonoPersistido = {
+  blocoId: string
+  label: string
+  horaInicio: string
+  horaFim: string
+  duracaoMin: number
+  iniciadoEm: string // ISO string
+}
+
 type ModalOvertime = {
   label: string
   minutos: number
+}
+
+function agendarNotificacaoSono(wakeMs: number) {
+  if (typeof window === 'undefined') return
+  const delay = wakeMs - Date.now()
+  if (delay <= 0 || delay > 14 * 60 * 60 * 1000) return // só agenda se < 14h
+  if (!('Notification' in window)) return
+  Notification.requestPermission().then(perm => {
+    if (perm !== 'granted') return
+    setTimeout(() => {
+      new Notification('168 · Sono', {
+        body: 'Bom dia! Hora de registrar como foi seu sono.',
+        icon: '/icone_meu_dia.png',
+      })
+    }, delay)
+  })
 }
 
 export default function HojePage() {
@@ -28,7 +55,61 @@ export default function HojePage() {
     weekday: 'long', day: 'numeric', month: 'long',
   })
 
+  // Detecta sono interrompido ou já finalizado ao abrir o app
+  useEffect(() => {
+    const raw = localStorage.getItem(SONO_KEY)
+    if (!raw) return
+    try {
+      const sono: SonoPersistido = JSON.parse(raw)
+      const iniciadoEm = new Date(sono.iniciadoEm)
+      const wakeMs = iniciadoEm.getTime() + sono.duracaoMin * 60 * 1000
+
+      if (Date.now() >= wakeMs) {
+        // Sono já deveria ter acabado — mostrar ResumoModal direto
+        localStorage.removeItem(SONO_KEY)
+        const duracaoRealMin = Math.round((Date.now() - iniciadoEm.getTime()) / 60000)
+        setExecucaoFinalizada({
+          id: '',
+          label: sono.label,
+          esfera: 'sono',
+          duracaoRealMin,
+          overtimeMin: 0,
+        })
+      } else {
+        // Ainda dentro do horário de sono — restaurar timer
+        setTimer({
+          blocoId: sono.blocoId,
+          label: sono.label,
+          esfera: 'sono',
+          horaInicio: sono.horaInicio,
+          horaFim: sono.horaFim,
+          duracaoMin: sono.duracaoMin,
+          iniciadoEm,
+          tipo: 'sono',
+        })
+      }
+    } catch {
+      localStorage.removeItem(SONO_KEY)
+    }
+  }, [])
+
   function handleIniciar(bloco: BlocoParaModal) {
+    const iniciadoEm = new Date()
+
+    if (bloco.esfera === 'sono') {
+      const wakeMs = iniciadoEm.getTime() + bloco.duracaoMin * 60 * 1000
+      const persistido: SonoPersistido = {
+        blocoId: bloco.id,
+        label: bloco.label,
+        horaInicio: bloco.hora_inicio,
+        horaFim: bloco.hora_fim,
+        duracaoMin: bloco.duracaoMin,
+        iniciadoEm: iniciadoEm.toISOString(),
+      }
+      localStorage.setItem(SONO_KEY, JSON.stringify(persistido))
+      agendarNotificacaoSono(wakeMs)
+    }
+
     setTimer({
       blocoId: bloco.id,
       label: bloco.label,
@@ -36,7 +117,8 @@ export default function HojePage() {
       horaInicio: bloco.hora_inicio,
       horaFim: bloco.hora_fim,
       duracaoMin: bloco.duracaoMin,
-      iniciadoEm: new Date(),
+      iniciadoEm,
+      tipo: bloco.esfera === 'sono' ? 'sono' : undefined,
     })
   }
 
@@ -59,9 +141,13 @@ export default function HojePage() {
   async function handleFinalizar() {
     if (!timer) return
 
+    if (timer.tipo === 'sono') {
+      localStorage.removeItem(SONO_KEY)
+    }
+
     const finalizadoEm = new Date()
     const duracaoRealMin = Math.round((finalizadoEm.getTime() - timer.iniciadoEm.getTime()) / 60000)
-    const overtimeMin = Math.max(0, duracaoRealMin - timer.duracaoMin)
+    const overtimeMin = timer.tipo === 'sono' ? 0 : Math.max(0, duracaoRealMin - timer.duracaoMin)
 
     let execucaoId = ''
     try {
@@ -70,7 +156,7 @@ export default function HojePage() {
       if (session) {
         const { data } = await supabase.from('execucao_bloco').insert({
           user_id: session.user.id,
-          bloco_fixo_id: timer.tipo === 'compromisso' ? null : timer.blocoId,
+          bloco_fixo_id: (timer.tipo === 'compromisso' || timer.tipo === 'sono') ? null : timer.blocoId,
           data: new Date().toISOString().slice(0, 10),
           iniciado_em: timer.iniciadoEm.toISOString(),
           finalizado_em: finalizadoEm.toISOString(),
@@ -94,8 +180,9 @@ export default function HojePage() {
   function handleResumoClose() {
     const overtime = execucaoFinalizada?.overtimeMin ?? 0
     const label = execucaoFinalizada?.label ?? ''
+    const ehSono = execucaoFinalizada?.esfera === 'sono'
     setExecucaoFinalizada(null)
-    if (overtime > 0) setOvertimeModal({ label, minutos: overtime })
+    if (!ehSono && overtime > 0) setOvertimeModal({ label, minutos: overtime })
   }
 
   return (

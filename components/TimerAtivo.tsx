@@ -10,7 +10,7 @@ export type TimerState = {
   horaFim: string
   duracaoMin: number
   iniciadoEm: Date
-  tipo?: 'bloco' | 'compromisso'
+  tipo?: 'bloco' | 'compromisso' | 'sono'
 }
 
 const ESFERA_COR: Record<string, string> = {
@@ -88,6 +88,40 @@ export default function TimerAtivo({ timer, onFinalizar }: Props) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [elapsedMin])
+
+  // Modo sono — display especial
+  if (timer?.tipo === 'sono') {
+    const horasDecorridas = Math.floor(elapsedMin / 60)
+    const minDecorridos = Math.floor(elapsedMin % 60)
+    const decLabel = horasDecorridas > 0
+      ? `${horasDecorridas}h${minDecorridos > 0 ? ` ${String(minDecorridos).padStart(2,'0')}min` : ''}`
+      : `${minDecorridos}min`
+
+    return (
+      <div
+        className="rounded-2xl px-5 py-4"
+        style={{ background: '#37415110', border: '2px solid #37415140' }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-2xl flex-shrink-0">💤</span>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-bold text-gray-800">Sono em andamento</p>
+            <p className="text-xs text-gray-400 mt-0.5 font-mono">
+              {timer.horaInicio.slice(0, 5)} → {timer.horaFim.slice(0, 5)}
+              <span className="ml-2">· {decLabel} dormidos</span>
+            </p>
+          </div>
+          <button
+            onClick={onFinalizar}
+            className="flex-shrink-0 text-xs font-bold px-3 py-1.5 rounded-lg text-white"
+            style={{ background: '#374151' }}
+          >
+            ☀ Acordei
+          </button>
+        </div>
+      </div>
+    )
+  }
 
   // Sem timer ativo — placeholder
   if (!timer) {

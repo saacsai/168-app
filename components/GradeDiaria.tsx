@@ -55,7 +55,8 @@ function eventosParaHora(eventos: CalendarEvento[], h: number): CalendarEvento[]
 function duracaoMin(horaInicio: string, horaFim: string): number {
   const [hi, mi] = horaInicio.split(':').map(Number)
   const [hf, mf] = horaFim.split(':').map(Number)
-  return (hf * 60 + mf) - (hi * 60 + mi)
+  const diff = (hf * 60 + mf) - (hi * 60 + mi)
+  return diff < 0 ? diff + 1440 : diff // overnight support
 }
 
 const ESFERA: Record<string, { cor: string; nome: string }> = {
@@ -248,10 +249,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, o
           const temCompromisso = comps.length > 0
 
           function handleClick() {
-            if (!bloco || bloco.esfera === 'sono') {
-              if (!bloco) onSlotClick?.(h)
-              return
-            }
+            if (!bloco) { onSlotClick?.(h); return }
             onBlocoClick?.({
               id: bloco.id,
               label: bloco.label,

@@ -25,14 +25,24 @@ interface Props {
   onClose: () => void
 }
 
+const SLEEP_QUALITY = [
+  { value: 1, emoji: '😴', label: 'Muito mal' },
+  { value: 2, emoji: '😞', label: 'Mal' },
+  { value: 3, emoji: '😐', label: 'Regular' },
+  { value: 4, emoji: '🙂', label: 'Bem' },
+  { value: 5, emoji: '🌟', label: 'Excelente' },
+]
+
 export default function ResumoModal({ execucao, onClose }: Props) {
   const [resumo, setResumo] = useState('')
+  const [sonoQualidade, setSonoQualidade] = useState(0)
   const [encaminhamentos, setEncaminhamentos] = useState<string[]>([])
   const [inputEnc, setInputEnc] = useState('')
   const [salvando, setSalvando] = useState(false)
 
   if (!execucao) return null
 
+  const ehSono = execucao.esfera === 'sono'
   const cor = ESFERA_COR[execucao.esfera] ?? '#1B2A4A'
 
   function adicionarEnc() {
@@ -50,10 +60,14 @@ export default function ResumoModal({ execucao, onClose }: Props) {
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error('sem sessão')
 
-      if (resumo.trim()) {
+      const resumoFinal = ehSono && sonoQualidade > 0
+        ? `Qualidade: ${sonoQualidade}/5 — ${SLEEP_QUALITY.find(q => q.value === sonoQualidade)?.label ?? ''}${resumo.trim() ? ` · ${resumo.trim()}` : ''}`
+        : resumo.trim()
+
+      if (resumoFinal) {
         await supabase
           .from('execucao_bloco')
-          .update({ resumo: resumo.trim() })
+          .update({ resumo: resumoFinal })
           .eq('id', execucao.id)
       }
 
@@ -82,11 +96,16 @@ export default function ResumoModal({ execucao, onClose }: Props) {
       <div className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[380px] bg-white rounded-2xl shadow-xl overflow-hidden">
 
         <div className="px-5 py-4 border-b" style={{ borderColor: cor + '40', background: cor + '10' }}>
-          <p className="text-[10px] font-bold tracking-wide uppercase" style={{ color: cor }}>Bloco finalizado</p>
+          <p className="text-[10px] font-bold tracking-wide uppercase" style={{ color: cor }}>
+            {ehSono ? 'Sono registrado' : 'Bloco finalizado'}
+          </p>
           <p className="text-sm font-bold text-gray-900 mt-0.5">{execucao.label}</p>
           <p className="text-xs text-gray-400 mt-0.5">
-            {execucao.duracaoRealMin} min realizados
-            {execucao.overtimeMin > 0 && (
+            {execucao.duracaoRealMin >= 60
+              ? `${Math.floor(execucao.duracaoRealMin / 60)}h${execucao.duracaoRealMin % 60 > 0 ? ` ${execucao.duracaoRealMin % 60}min` : ''} realizados`
+              : `${execucao.duracaoRealMin} min realizados`
+            }
+            {!ehSono && execucao.overtimeMin > 0 && (
               <span className="text-red-500 ml-1.5">· +{execucao.overtimeMin} min além do previsto</span>
             )}
           </p>
@@ -94,17 +113,49 @@ export default function ResumoModal({ execucao, onClose }: Props) {
 
         <div className="px-5 py-4 space-y-4">
 
-          <div>
-            <label className="block text-xs font-medium text-gray-500 mb-1.5">O que foi feito?</label>
-            <textarea
-              autoFocus
-              value={resumo}
-              onChange={e => setResumo(e.target.value)}
-              placeholder="Resumo do que aconteceu neste bloco…"
-              rows={3}
-              className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-400 placeholder-gray-300 resize-none"
-            />
-          </div>
+          {ehSono ? (
+            /* ── Qualidade do sono ── */
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-2">Como você dormiu?</label>
+              <div className="flex gap-2">
+                {SLEEP_QUALITY.map(q => (
+                  <button
+                    key={q.value}
+                    onClick={() => setSonoQualidade(q.value)}
+                    className="flex-1 flex flex-col items-center gap-1 py-2 rounded-xl border transition-all text-center"
+                    style={{
+                      borderColor: sonoQualidade === q.value ? cor : '#e5e7eb',
+                      background: sonoQualidade === q.value ? cor + '15' : undefined,
+                    }}
+                    title={q.label}
+                  >
+                    <span className="text-lg">{q.emoji}</span>
+                    <span className="text-[9px] text-gray-400 leading-tight">{q.label}</span>
+                  </button>
+                ))}
+              </div>
+              <textarea
+                value={resumo}
+                onChange={e => setResumo(e.target.value)}
+                placeholder="Observações (opcional)…"
+                rows={2}
+                className="w-full mt-2 rounded-xl border border-gray-200 px-3 py-2 text-sm text-gray-900 outline-none focus:border-gray-400 placeholder-gray-300 resize-none"
+              />
+            </div>
+          ) : (
+            /* ── Resumo bloco normal ── */
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1.5">O que foi feito?</label>
+              <textarea
+                autoFocus
+                value={resumo}
+                onChange={e => setResumo(e.target.value)}
+                placeholder="Resumo do que aconteceu neste bloco…"
+                rows={3}
+                className="w-full rounded-xl border border-gray-200 px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-400 placeholder-gray-300 resize-none"
+              />
+            </div>
+          )}
 
           <div>
             <label className="block text-xs font-medium text-gray-500 mb-1.5">Encaminhamentos</label>
