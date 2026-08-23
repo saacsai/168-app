@@ -6,7 +6,7 @@ import Toggle from '@/components/Toggle'
 import EditarPerfilPage from '@/components/EditarPerfilPage'
 import GerenciarPlanoPage from '@/components/GerenciarPlanoPage'
 
-const PRIMARY = '#2A5F6B'
+const PRIMARY = '#000000'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -246,7 +246,7 @@ function AssistenteSection() {
         />
         {nameIsBia && (
           <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-            BIA é o nome da assistente oficial do MeuDIA. Escolha outro nome para evitar confusões — sua assistente pessoal deve ter uma identidade própria.
+            BIA é o nome da assistente oficial do 168. Escolha outro nome para evitar confusões — sua assistente pessoal deve ter uma identidade própria.
           </p>
         )}
       </div>

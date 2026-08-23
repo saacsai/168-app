@@ -8,7 +8,7 @@ interface Props {
   size?: 'sm' | 'md'
 }
 
-export default function Toggle({ value, onToggle, loading = false, color = '#2A5F6B', size = 'md' }: Props) {
+export default function Toggle({ value, onToggle, loading = false, color = '#000000', size = 'md' }: Props) {
   const dimensions = size === 'sm'
     ? { btn: 'w-9 h-5', thumb: 'w-4 h-4', translate: 16 }
     : { btn: 'w-11 h-6', thumb: 'w-5 h-5', translate: 20 }

@@ -31,7 +31,7 @@ export default function Sidebar({
   navItems,
   userName,
   userEmail,
-  primaryColor = '#1B2A4A',
+  primaryColor = '#000000',
   onLogout,
   onEditarPerfil,
   onGerenciarPlano,

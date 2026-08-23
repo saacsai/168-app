@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { getSupabase } from '@/lib/supabase'
 
-const PRIMARY = '#2A5F6B'
+const PRIMARY = '#000000'
 
 type Estado = 'carregando' | 'sem_instancia' | 'aguardando_qr' | 'conectado'
 

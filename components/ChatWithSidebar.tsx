@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { getSupabase } from '@/lib/supabase'
 
-const PRIMARY = '#2A5F6B'
+const PRIMARY = '#000000'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -445,7 +445,7 @@ export default function ChatWithSidebar({
               className="md:hidden text-left flex items-center gap-0.5 mt-0.5"
               onClick={() => setSidebarOpen(true)}
             >
-              <span className="text-[11px] truncate max-w-[140px]" style={{ color: '#2A5F6B' }}>
+              <span className="text-[11px] truncate max-w-[140px]" style={{ color: '#000000' }}>
                 {currentConvTitle ?? 'Nova conversa'}
               </span>
               <span className="text-[11px] text-gray-400">›</span>

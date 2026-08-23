@@ -264,7 +264,7 @@ export default function HojePage() {
               <button
                 onClick={() => setOvertimeModal(null)}
                 className="w-full py-2.5 rounded-xl text-sm font-bold text-white"
-                style={{ background: '#1B2A4A' }}
+                style={{ background: '#000000' }}
               >
                 Entendido
               </button>

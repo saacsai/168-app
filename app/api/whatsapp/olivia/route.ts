@@ -108,14 +108,14 @@ export async function POST(req: NextRequest) {
 
   const senderLabel = contact_name ? `A mensagem veio de: ${contact_name}.` : ''
 
-  const system = `Você é ${assistantName} — assistente pessoal de ${userName} no MeuDIA.
+  const system = `Você é ${assistantName} — assistente pessoal de ${userName} no 168.
 
 ${personaBase}
 
 Tom: ${tone}.
 Formato: ${size}.
 ${memoryBlock}
-O MeuDIA está gerenciando o WhatsApp de ${userName} enquanto ele foca no que importa.
+O 168 está gerenciando o WhatsApp de ${userName} enquanto ele foca no que importa.
 Você está respondendo pelo WhatsApp — mantenha mensagens curtas e naturais para o canal.
 ${senderLabel}
 ${greetingBlock}

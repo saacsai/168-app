@@ -225,17 +225,17 @@ export default function GradeSemanal() {
                   <div
                     key={i}
                     className="py-2 text-center border-l border-gray-100"
-                    style={{ background: isHoje ? '#1B2A4A08' : undefined }}
+                    style={{ background: isHoje ? '#00000008' : undefined }}
                   >
                     <p
                       className="text-[10px] font-bold tracking-wide"
-                      style={{ color: isHoje ? '#1B2A4A' : '#9ca3af' }}
+                      style={{ color: isHoje ? '#000000' : '#9ca3af' }}
                     >
                       {COL_DIA[i]}
                     </p>
                     <p
                       className="text-sm font-bold mt-0.5"
-                      style={{ color: isHoje ? '#1B2A4A' : '#374151' }}
+                      style={{ color: isHoje ? '#000000' : '#374151' }}
                     >
                       {d.getDate()}
                     </p>
@@ -262,7 +262,7 @@ export default function GradeSemanal() {
                     <div className="flex items-center justify-end pr-2">
                       <span
                         className="text-[10px] font-mono"
-                        style={{ color: isHoraAtual ? '#1B2A4A' : '#d1d5db', fontWeight: isHoraAtual ? 700 : 400 }}
+                        style={{ color: isHoraAtual ? '#000000' : '#d1d5db', fontWeight: isHoraAtual ? 700 : 400 }}
                       >
                         {String(h).padStart(2, '0')}h
                       </span>
@@ -280,7 +280,7 @@ export default function GradeSemanal() {
                         <div
                           key={di}
                           className="border-l border-gray-100 relative overflow-hidden flex items-center px-1"
-                          style={{ background: isHoje && !bloco && comps.length === 0 ? '#1B2A4A05' : undefined }}
+                          style={{ background: isHoje && !bloco && comps.length === 0 ? '#00000005' : undefined }}
                         >
                           {bloco && cor ? (
                             <div

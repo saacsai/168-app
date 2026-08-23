@@ -53,7 +53,7 @@ export default function CallbackPage() {
   }, [])
 
   return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F0F5F6' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F5F5F5' }}>
       <p className="text-sm text-gray-400">Verificando acesso…</p>
     </div>
   )

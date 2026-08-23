@@ -43,7 +43,7 @@ export default function ResumoModal({ execucao, onClose }: Props) {
   if (!execucao) return null
 
   const ehSono = execucao.esfera === 'sono'
-  const cor = ESFERA_COR[execucao.esfera] ?? '#1B2A4A'
+  const cor = ESFERA_COR[execucao.esfera] ?? '#000000'
 
   function adicionarEnc() {
     const texto = inputEnc.trim()

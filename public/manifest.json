@@ -1,15 +1,15 @@
 {
-  "name": "MeuDIA",
-  "short_name": "MeuDIA",
-  "description": "Organizado e priorizado. Todo dia.",
+  "name": "168",
+  "short_name": "168",
+  "description": "Organização 24x7.",
   "start_url": "/dashboard",
   "display": "standalone",
-  "background_color": "#2A5F6B",
-  "theme_color": "#2A5F6B",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "orientation": "portrait",
   "icons": [
     {
-      "src": "/icone_meu_dia.png",
+      "src": "/icone_168.png",
       "sizes": "any",
       "type": "image/png",
       "purpose": "any maskable"

@@ -41,7 +41,7 @@ export default function AssistentePage() {
   const artigo = fem ? 'a' : 'o'
   const possessivo = fem ? 'sua' : 'seu'
   const subtitulo = fem ? 'Sua assistente pessoal' : 'Seu assistente pessoal'
-  const welcomeMessage = `Olá! Sou ${artigo} ${assistantName}, ${possessivo} assistente no MeuDIA. Posso ajudar você a gerenciar seus contatos, consultar a fila de mensagens, criar grupos e muito mais. O que você precisa hoje?`
+  const welcomeMessage = `Olá! Sou ${artigo} ${assistantName}, ${possessivo} assistente no 168. Posso ajudar você a gerenciar seus contatos, consultar a fila de mensagens, criar grupos e muito mais. O que você precisa hoje?`
 
   return (
     <ChatWithSidebar

@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
     const info = await getUserInfo(req)
     if (!info) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
 
-    const origin = req.headers.get('origin') || 'https://meudia.saacs.com.br'
+    const origin = req.headers.get('origin') || 'https://168.lucianomaeda.com.br'
     const stripe = new Stripe(secretKey)
 
     const session = await stripe.checkout.sessions.create({

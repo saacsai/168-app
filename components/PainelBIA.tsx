@@ -112,7 +112,7 @@ export default function PainelBIA() {
     <div className="flex flex-col h-full bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
 
       {/* Header */}
-      <div className="flex items-center gap-2.5 px-4 py-3 flex-shrink-0" style={{ background: '#1B2A4A' }}>
+      <div className="flex items-center gap-2.5 px-4 py-3 flex-shrink-0" style={{ background: '#000000' }}>
         <div className="w-2 h-2 rounded-full bg-green-400 flex-shrink-0" />
         <span className="text-white font-bold text-sm tracking-wide">BIA</span>
         <span className="text-xs ml-auto flex items-center gap-1.5" style={{ color: 'rgba(255,255,255,0.35)' }}>
@@ -142,7 +142,7 @@ export default function PainelBIA() {
               className="max-w-[88%] text-sm px-3 py-2 leading-relaxed whitespace-pre-wrap"
               style={m.role === 'assistant'
                 ? { background: '#f3f4f6', color: '#111827', borderRadius: '12px 12px 12px 3px' }
-                : { background: '#1B2A4A', color: '#fff', borderRadius: '12px 12px 3px 12px' }
+                : { background: '#000000', color: '#fff', borderRadius: '12px 12px 3px 12px' }
               }
             >
               {m.content || <span className="animate-pulse text-gray-400">···</span>}
@@ -172,7 +172,7 @@ export default function PainelBIA() {
             type="submit"
             disabled={!input.trim() || streaming}
             className="flex-shrink-0 w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: input.trim() && !streaming ? '#1B2A4A' : '#e5e7eb' }}
+            style={{ background: input.trim() && !streaming ? '#000000' : '#e5e7eb' }}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
               <line x1="22" y1="2" x2="11" y2="13" />

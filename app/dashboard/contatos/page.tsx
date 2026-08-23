@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { getSupabase } from '@/lib/supabase'
 
-const PRIMARY = '#2A5F6B'
+const PRIMARY = '#000000'
 
 const GROUP_COLORS = [
   '#2A5F6B', '#7C3AED', '#1E40AF', '#059669',

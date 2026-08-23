@@ -59,7 +59,7 @@ export default function CompromissoModal({ compromisso, onClose, onIniciarTimer,
             <button
               onClick={() => { onIniciarTimer(compromisso); onClose() }}
               className="flex items-center gap-2 w-full py-2.5 px-4 rounded-xl text-sm font-bold text-white justify-center"
-              style={{ background: '#1B2A4A' }}
+              style={{ background: '#000000' }}
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>

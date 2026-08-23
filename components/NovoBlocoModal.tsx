@@ -91,7 +91,7 @@ export default function NovoBlocoModal({ hora, onClose, onSaved }: Props) {
       <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-[2px]" onClick={onClose} />
       <div className="fixed z-50 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[360px] bg-white rounded-2xl shadow-xl overflow-hidden">
 
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between" style={{ background: '#1B2A4A' }}>
+        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between" style={{ background: '#000000' }}>
           <span className="text-sm font-bold text-white">Novo bloco</span>
           <button onClick={onClose} className="text-white/50 hover:text-white text-xl leading-none">×</button>
         </div>
@@ -161,7 +161,7 @@ export default function NovoBlocoModal({ hora, onClose, onSaved }: Props) {
                   onClick={() => toggleDia(i)}
                   className="flex-1 py-2 rounded-lg text-[11px] font-medium transition-all"
                   style={dias.includes(i)
-                    ? { background: (esfCfg?.cor ?? '#1B2A4A') + '20', color: esfCfg?.cor ?? '#1B2A4A', border: `1.5px solid ${esfCfg?.cor ?? '#1B2A4A'}` }
+                    ? { background: (esfCfg?.cor ?? '#000000') + '20', color: esfCfg?.cor ?? '#000000', border: `1.5px solid ${esfCfg?.cor ?? '#000000'}` }
                     : { background: '#f9fafb', color: '#9ca3af', border: '1.5px solid #e5e7eb' }
                   }
                 >
@@ -174,7 +174,7 @@ export default function NovoBlocoModal({ hora, onClose, onSaved }: Props) {
           <label className="flex items-center gap-3 cursor-pointer" onClick={() => setInegociavel(v => !v)}>
             <div
               className="w-9 h-5 rounded-full transition-colors flex-shrink-0 relative"
-              style={{ background: inegociavel ? '#1B2A4A' : '#e5e7eb' }}
+              style={{ background: inegociavel ? '#000000' : '#e5e7eb' }}
             >
               <div
                 className="absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"
@@ -201,7 +201,7 @@ export default function NovoBlocoModal({ hora, onClose, onSaved }: Props) {
               type="submit"
               disabled={salvando}
               className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white disabled:opacity-50"
-              style={{ background: '#1B2A4A' }}
+              style={{ background: '#000000' }}
             >
               {salvando ? 'Salvando…' : 'Salvar bloco'}
             </button>

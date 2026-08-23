@@ -145,7 +145,7 @@ export default function TimerAtivo({ timer, onFinalizar }: Props) {
   const overtime = restanteMin < 0
   const alertaLeve = restanteMin <= 10 && restanteMin > 5 && !overtime
   const alertaForte = restanteMin <= 5 && !overtime
-  const cor = ESFERA_COR[timer.esfera] ?? '#1B2A4A'
+  const cor = ESFERA_COR[timer.esfera] ?? '#000000'
 
   const borderColor = overtime ? '#dc2626' : alertaForte ? '#f59e0b' : cor
 

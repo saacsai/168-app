@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useCallback } from 'react'
 import { getSupabase } from '@/lib/supabase'
 
-const PRIMARY = '#2A5F6B'
+const PRIMARY = '#000000'
 const VIDEO_URL = '' // Substituir pela URL do YouTube ou MP4 quando gravar
 const inputClass = 'w-full border border-gray-300 rounded-lg px-3 py-2 text-sm outline-none transition-colors'
 
@@ -59,7 +59,7 @@ function VideoWidget({ url }: { url: string }) {
           src={`https://www.youtube.com/embed/${ytMatch[1]}`}
           className="w-full h-full"
           allowFullScreen
-          title="Boas-vindas MeuDIA"
+          title="Boas-vindas 168"
         />
       </div>
     )
@@ -115,7 +115,7 @@ function AcceptanceWidget({ onAccepted }: { onAccepted: () => void }) {
         <p className="text-[10px] font-bold text-amber-700 uppercase tracking-wider mb-2.5">Como o sistema funciona</p>
         <ul className="space-y-2">
           {[
-            'O MeuDIA gerencia suas mensagens, não as decide por você.',
+            'O 168 gerencia suas mensagens, não as decide por você.',
             'Você mantém controle total — desconecte quando quiser, sem perder dados.',
             'Sua assistente gerencia expectativas. Você decide o que responder e quando.',
             'Para funcionar de verdade, confie no sistema. Delegar e continuar checando tudo anula o efeito.',
@@ -305,7 +305,7 @@ function WhatsAppStep({ onConnected }: { onConnected: () => void }) {
         </div>
       ) : (
         <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 text-xs text-blue-700">
-          Use o mesmo número de WhatsApp que deseja conectar ao MeuDIA. Você pode editar seu perfil depois.
+          Use o mesmo número de WhatsApp que deseja conectar ao 168. Você pode editar seu perfil depois.
         </div>
       )}
       {error && <p className="text-xs text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">{error}</p>}
@@ -603,7 +603,7 @@ export default function OnboardingView({ userName, initialStep, onComplete }: On
   async function initPhase0() {
     const firstName = userName?.trim().split(/\s+/)[0] || ''
     await biaSay(
-      `Olá${firstName ? `, ${firstName}` : ''}! Tudo bem? Sou a BIA, assistente do MeuDIA.`,
+      `Olá${firstName ? `, ${firstName}` : ''}! Tudo bem? Sou a BIA, assistente do 168.`,
       undefined, 600
     )
     await biaSay(
@@ -634,7 +634,7 @@ export default function OnboardingView({ userName, initialStep, onComplete }: On
     try {
       await advanceStep(1)
       await biaSay('Obrigado! Agora vamos conectar seu WhatsApp.', undefined, 500)
-      await biaSay('É por aqui que suas mensagens chegam, sua assistente atua e o digest é montado. Sem isso, o MeuDIA não funciona.')
+      await biaSay('É por aqui que suas mensagens chegam, sua assistente atua e o digest é montado. Sem isso, o 168 não funciona.')
       await biaSay(undefined, 'whatsapp', 400)
       setPhase(2)
     } catch {
@@ -689,7 +689,7 @@ export default function OnboardingView({ userName, initialStep, onComplete }: On
 
   async function handleAssistanteComplete(name: string) {
     try {
-      await biaSay(`Tudo pronto! ${name} está configurada e pronta para trabalhar. Bem-vindo ao MeuDIA! 😊`, undefined, 400)
+      await biaSay(`Tudo pronto! ${name} está configurada e pronta para trabalhar. Bem-vindo ao 168! 😊`, undefined, 400)
       onComplete(name)
     } catch {
       onComplete(name)
@@ -826,7 +826,7 @@ export default function OnboardingView({ userName, initialStep, onComplete }: On
         <div className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0" style={{ background: PRIMARY }}>BI</div>
         <div>
           <p className="font-semibold text-gray-800 text-sm">BIA</p>
-          <p className="text-xs text-gray-400">Configuração inicial · MeuDIA</p>
+          <p className="text-xs text-gray-400">Configuração inicial · 168</p>
         </div>
       </div>
 

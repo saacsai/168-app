@@ -4,8 +4,8 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { getSupabase } from '@/lib/supabase'
 
-const PRIMARY = '#2A5F6B'
-const ACCENT  = '#8FC8D4'
+const PRIMARY = '#000000'
+const PRIMARY_DARK = '#262626'
 
 export default function LoginPage() {
   const [email, setEmail] = useState('')
@@ -86,52 +86,52 @@ export default function LoginPage() {
   }
 
   if (mensagem) return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#E3F0F3' }}>
-      <div className="rounded-xl shadow-xl w-full max-w-sm overflow-hidden" style={{ background: PRIMARY }}>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F5F5F5' }}>
+      <div className="rounded-xl shadow-xl w-full max-w-sm overflow-hidden bg-white">
         <div className="px-6 pt-8 pb-6 text-center space-y-3">
-          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto" style={{ background: 'rgba(255,255,255,0.15)' }}>
+          <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto" style={{ background: PRIMARY }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="20 6 9 17 4 12"/>
             </svg>
           </div>
-          <p className="text-sm font-semibold text-white">Verifique seu email</p>
-          <p className="text-sm" style={{ color: ACCENT }}>{mensagem}</p>
-          <button onClick={() => { setMensagem(''); setModo('login') }} className="text-xs hover:underline" style={{ color: ACCENT }}>
+          <p className="text-sm font-semibold text-gray-900">Verifique seu email</p>
+          <p className="text-sm text-gray-500">{mensagem}</p>
+          <button onClick={() => { setMensagem(''); setModo('login') }} className="text-xs hover:underline text-gray-700">
             Voltar ao login
           </button>
         </div>
         <div className="flex justify-center pb-5">
-          <Image src="/logo_saacs_sem_slogan.png" alt="SAACS" width={74} height={20} className="object-contain" style={{ opacity: 0.7 }} />
+          <Image src="/logo_saacs_sem_slogan.png" alt="SAACS" width={74} height={20} className="object-contain" style={{ opacity: 0.5 }} />
         </div>
       </div>
     </div>
   )
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#E3F0F3' }}>
-      <div className="rounded-xl shadow-xl w-full max-w-sm overflow-hidden" style={{ background: PRIMARY }}>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F5F5F5' }}>
+      <div className="rounded-xl shadow-xl w-full max-w-sm overflow-hidden bg-white">
 
         {/* Logo */}
         <div className="flex justify-center pt-8 pb-5">
           <Image
-            src="/meudia_marca.png"
-            alt="MeuDIA"
+            src="/168_principal.png"
+            alt="168"
             width={194}
-            height={73}
+            height={77}
             className="object-contain"
             priority
           />
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }} />
+        <div className="border-t border-gray-100" />
 
         {/* Form */}
         <div className="px-6 py-6">
           <div className="mb-5">
-            <p className="text-base font-semibold text-white">
+            <p className="text-base font-semibold text-gray-900">
               {modo === 'login' ? 'Acessar dashboard' : modo === 'cadastro' ? 'Criar conta' : 'Recuperar senha'}
             </p>
-            <p className="text-xs mt-0.5" style={{ color: ACCENT }}>
+            <p className="text-xs mt-0.5 text-gray-500">
               {modo === 'login' ? 'Entre com seu email e senha.' : modo === 'cadastro' ? 'Preencha os dados para criar sua conta.' : 'Informe seu email para receber o link.'}
             </p>
           </div>
@@ -139,51 +139,52 @@ export default function LoginPage() {
           {modo === 'login' ? (
             <form onSubmit={handleLogin} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Email</label>
+                <label className="block text-xs font-medium mb-1 text-gray-500">Email</label>
                 <input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   required autoFocus
-                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-transparent focus:border-white/40"
+                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Senha</label>
+                <label className="block text-xs font-medium mb-1 text-gray-500">Senha</label>
                 <input
                   type="password" value={senha} onChange={e => setSenha(e.target.value)}
                   required
-                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-transparent focus:border-white/40"
+                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
                 <button
                   type="button"
                   onClick={() => { setModo('recuperar'); setErro('') }}
-                  className="mt-1.5 text-xs hover:underline float-right"
-                  style={{ color: ACCENT }}
+                  className="mt-1.5 text-xs hover:underline float-right text-gray-500"
                 >
                   Esqueci minha senha
                 </button>
               </div>
               {erro && (
-                <p className="text-xs rounded-lg p-2 clear-both" style={{ background: 'rgba(255,255,255,0.12)', color: '#fca5a5' }}>
+                <p className="text-xs rounded-lg p-2 clear-both bg-red-50 text-red-600">
                   {erro}
                 </p>
               )}
               <button
                 type="submit" disabled={loading}
-                className="w-full text-sm font-semibold rounded-lg py-2.5 disabled:opacity-60 transition-all clear-both"
-                style={{ background: loading ? 'white' : ACCENT, color: PRIMARY }}
+                className="w-full text-sm font-semibold rounded-lg py-2.5 disabled:opacity-60 transition-colors clear-both text-white"
+                style={{ background: loading ? PRIMARY_DARK : PRIMARY }}
+                onMouseEnter={e => !loading && (e.currentTarget.style.background = PRIMARY_DARK)}
+                onMouseLeave={e => !loading && (e.currentTarget.style.background = PRIMARY)}
               >
                 {loading ? 'Entrando…' : 'Entrar'}
               </button>
 
               <div className="flex items-center gap-3 pt-1">
-                <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.15)' }} />
-                <span className="text-xs" style={{ color: 'rgba(255,255,255,0.4)' }}>ou</span>
-                <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.15)' }} />
+                <div className="flex-1 h-px bg-gray-100" />
+                <span className="text-xs text-gray-400">ou</span>
+                <div className="flex-1 h-px bg-gray-100" />
               </div>
 
               <button
                 type="button" onClick={handleGoogle} disabled={loading}
-                className="w-full flex items-center justify-center gap-3 bg-white rounded-lg py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                className="w-full flex items-center justify-center gap-3 bg-white border border-gray-200 rounded-lg py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 transition-colors"
               >
                 <svg width="16" height="16" viewBox="0 0 48 48">
                   <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
@@ -197,30 +198,31 @@ export default function LoginPage() {
           ) : modo === 'recuperar' ? (
             <form onSubmit={handleRecuperar} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Email</label>
+                <label className="block text-xs font-medium mb-1 text-gray-500">Email</label>
                 <input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   required autoFocus
-                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-transparent focus:border-white/40"
+                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               {erro && (
-                <p className="text-xs rounded-lg p-2" style={{ background: 'rgba(255,255,255,0.12)', color: '#fca5a5' }}>
+                <p className="text-xs rounded-lg p-2 bg-red-50 text-red-600">
                   {erro}
                 </p>
               )}
               <button
                 type="submit" disabled={loading}
-                className="w-full text-sm font-semibold rounded-lg py-2.5 disabled:opacity-50 transition-opacity"
-                style={{ background: 'white', color: PRIMARY }}
+                className="w-full text-sm font-semibold rounded-lg py-2.5 disabled:opacity-50 transition-colors text-white"
+                style={{ background: PRIMARY }}
+                onMouseEnter={e => (e.currentTarget.style.background = PRIMARY_DARK)}
+                onMouseLeave={e => (e.currentTarget.style.background = PRIMARY)}
               >
                 {loading ? 'Enviando…' : 'Enviar link de recuperação'}
               </button>
               <button
                 type="button"
                 onClick={() => { setModo('login'); setErro('') }}
-                className="w-full text-xs hover:underline"
-                style={{ color: ACCENT }}
+                className="w-full text-xs hover:underline text-gray-500"
               >
                 Voltar ao login
               </button>
@@ -228,56 +230,58 @@ export default function LoginPage() {
           ) : (
             <form onSubmit={handleCadastro} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Nome</label>
+                <label className="block text-xs font-medium mb-1 text-gray-500">Nome</label>
                 <input
                   type="text" value={nome} onChange={e => setNome(e.target.value)}
                   placeholder="Seu nome completo"
                   required autoFocus
-                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-transparent focus:border-white/40"
+                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Email</label>
+                <label className="block text-xs font-medium mb-1 text-gray-500">Email</label>
                 <input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   required
-                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-transparent focus:border-white/40"
+                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>WhatsApp</label>
+                <label className="block text-xs font-medium mb-1 text-gray-500">WhatsApp</label>
                 <input
                   type="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)}
                   placeholder="(11) 99999-9999"
                   required
-                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-transparent focus:border-white/40"
+                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Senha</label>
+                <label className="block text-xs font-medium mb-1 text-gray-500">Senha</label>
                 <input
                   type="password" value={senha} onChange={e => setSenha(e.target.value)}
                   required
-                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-transparent focus:border-white/40"
+                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: 'rgba(255,255,255,0.7)' }}>Confirmar senha</label>
+                <label className="block text-xs font-medium mb-1 text-gray-500">Confirmar senha</label>
                 <input
                   type="password" value={senhaConfirm} onChange={e => setSenhaConfirm(e.target.value)}
                   required
-                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-transparent focus:border-white/40"
+                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               {erro && (
-                <p className="text-xs rounded-lg p-2" style={{ background: 'rgba(255,255,255,0.12)', color: '#fca5a5' }}>
+                <p className="text-xs rounded-lg p-2 bg-red-50 text-red-600">
                   {erro}
                 </p>
               )}
               <button
                 type="submit" disabled={loading}
-                className="w-full text-sm font-semibold rounded-lg py-2.5 disabled:opacity-60 transition-all"
-                style={{ background: loading ? 'white' : ACCENT, color: PRIMARY }}
+                className="w-full text-sm font-semibold rounded-lg py-2.5 disabled:opacity-60 transition-colors text-white"
+                style={{ background: loading ? PRIMARY_DARK : PRIMARY }}
+                onMouseEnter={e => !loading && (e.currentTarget.style.background = PRIMARY_DARK)}
+                onMouseLeave={e => !loading && (e.currentTarget.style.background = PRIMARY)}
               >
                 {loading ? 'Criando conta…' : 'Criar conta'}
               </button>
@@ -286,22 +290,22 @@ export default function LoginPage() {
 
           <div className="mt-4 text-center">
             {modo === 'login' ? (
-              <button onClick={() => { setModo('cadastro'); setErro('') }} className="text-xs hover:underline" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                Não tem conta? <span style={{ color: ACCENT }}>Criar conta</span>
+              <button onClick={() => { setModo('cadastro'); setErro('') }} className="text-xs hover:underline text-gray-500">
+                Não tem conta? <span className="text-gray-900 font-medium">Criar conta</span>
               </button>
             ) : modo === 'cadastro' ? (
-              <button onClick={() => { setModo('login'); setErro('') }} className="text-xs hover:underline" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                Já tem conta? <span style={{ color: ACCENT }}>Entrar</span>
+              <button onClick={() => { setModo('login'); setErro('') }} className="text-xs hover:underline text-gray-500">
+                Já tem conta? <span className="text-gray-900 font-medium">Entrar</span>
               </button>
             ) : null}
           </div>
         </div>
 
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.12)' }} />
+        <div className="border-t border-gray-100" />
 
         {/* Footer */}
         <div className="flex justify-center py-4">
-          <Image src="/logo_saacs_sem_slogan.png" alt="SAACS" width={74} height={20} className="object-contain" style={{ opacity: 0.7 }} />
+          <Image src="/logo_saacs_sem_slogan.png" alt="SAACS" width={74} height={20} className="object-contain" style={{ opacity: 0.5 }} />
         </div>
 
       </div>

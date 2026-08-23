@@ -267,7 +267,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, o
               className="group flex items-stretch cursor-pointer"
               style={{
                 height: `${ROW_HEIGHT}px`,
-                borderLeft: isNow ? '3px solid #1B2A4A' : '3px solid transparent',
+                borderLeft: isNow ? '3px solid #000000' : '3px solid transparent',
                 background: isNow && !bloco ? 'rgba(27,42,74,0.025)' : undefined,
               }}
               onClick={handleClick}
@@ -277,7 +277,7 @@ export default function GradeDiaria({ timerBlocoId, onBlocoClick, onSlotClick, o
                 <span
                   className="text-xs font-mono"
                   style={{
-                    color: isNow ? '#1B2A4A' : '#d1d5db',
+                    color: isNow ? '#000000' : '#d1d5db',
                     fontWeight: isNow ? 700 : 400,
                   }}
                 >

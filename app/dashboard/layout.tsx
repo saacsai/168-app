@@ -8,7 +8,7 @@ import BottomNav from '@/components/BottomNav'
 import EditarPerfilPage from '@/components/EditarPerfilPage'
 import GerenciarPlanoPage from '@/components/GerenciarPlanoPage'
 import UsoCreditsPage from '@/components/UsoCreditsPage'
-const PRIMARY = '#1B2A4A'
+const PRIMARY = '#000000'
 
 type View = 'main' | 'perfil' | 'plano' | 'uso'
 
@@ -133,13 +133,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   }
 
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F0F5F6' }}>
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#F5F5F5' }}>
       <p className="text-sm text-gray-400">Carregando…</p>
     </div>
   )
 
   return (
-    <div className="min-h-screen" style={{ background: '#F0F5F6' }}>
+    <div className="min-h-screen" style={{ background: '#F5F5F5' }}>
       {/* Sidebar — apenas desktop */}
       <div className="hidden md:block">
         <Sidebar

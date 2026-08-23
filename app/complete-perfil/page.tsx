@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { getSupabase } from '@/lib/supabase'
 
-const PRIMARY = '#2A5F6B'
+const PRIMARY = '#000000'
 
 export default function CompletePerfil() {
   const [whatsapp, setWhatsapp] = useState('')
@@ -48,16 +48,16 @@ export default function CompletePerfil() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F0F5F6' }}>
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F5F5F5' }}>
       <div className="bg-white rounded-2xl shadow-sm border border-gray-200 w-full max-w-sm p-8">
 
         <div className="flex justify-center mb-8">
-          <Image src="/meudia_logo.jpg" alt="MeuDIA" width={120} height={120} className="rounded-xl" priority />
+          <Image src="/icone_168.png" alt="168" width={90} height={90} priority />
         </div>
 
         <h1 className="text-lg font-bold text-gray-900 mb-1">Complete seu perfil</h1>
         <p className="text-sm text-gray-500 mb-6">
-          {nome ? `Olá, ${nome.split(' ')[0]}! ` : ''}Para usar o MeuDIA precisamos do seu WhatsApp.
+          {nome ? `Olá, ${nome.split(' ')[0]}! ` : ''}Para usar o 168 precisamos do seu WhatsApp.
         </p>
 
         <form onSubmit={handleSubmit} className="space-y-4">

@@ -82,14 +82,14 @@ export async function POST(req: NextRequest) {
     ? inst.persona_description
     : `Sou ${assistantName}, assistente pessoal de ${userName}.`
 
-  const system = `Você é ${assistantName} — assistente pessoal de ${userName} no MeuDIA.
+  const system = `Você é ${assistantName} — assistente pessoal de ${userName} no 168.
 
 ${personaBase}
 
 Tom: ${tone}.
 Formato: ${size}.
 ${memoryBlock}
-O MeuDIA está gerenciando o WhatsApp de ${userName} enquanto ele foca no que importa.
+O 168 está gerenciando o WhatsApp de ${userName} enquanto ele foca no que importa.
 
 TOM E ESTILO:
 - Profissional e humana. Linguagem simples e direta — sem floreios de IA tentando parecer humana.
