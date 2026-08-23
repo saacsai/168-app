@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
+import Image from 'next/image'
 import { getSupabase } from '@/lib/supabase'
 import Sidebar from '@/components/Sidebar'
 import BottomNav from '@/components/BottomNav'
@@ -9,6 +10,7 @@ import EditarPerfilPage from '@/components/EditarPerfilPage'
 import GerenciarPlanoPage from '@/components/GerenciarPlanoPage'
 import UsoCreditsPage from '@/components/UsoCreditsPage'
 const PRIMARY = '#000000'
+const SIDEBAR_BG = '#F5F5F5'
 
 type View = 'main' | 'perfil' | 'plano' | 'uso'
 
@@ -146,7 +148,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           navItems={NAV}
           userName={userName}
           userEmail={userEmail}
-          primaryColor={PRIMARY}
+          primaryColor={SIDEBAR_BG}
           onLogout={handleLogout}
           onEditarPerfil={() => setView('perfil')}
           onGerenciarPlano={() => setView('plano')}
@@ -157,7 +159,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Header mobile — logo + sair — todas as abas */}
       <header className="md:hidden sticky top-0 z-40 flex items-center justify-between px-4 py-3" style={{ background: PRIMARY }}>
-        <span className="text-white font-bold text-2xl tracking-tight">168</span>
+        <Image src="/icone_168.png" alt="168" width={32} height={32} className="object-contain" priority />
         <button
           onClick={handleLogout}
           className="text-xs px-3 py-1.5 rounded-lg"

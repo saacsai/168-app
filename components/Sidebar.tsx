@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import AvatarMenu from './AvatarMenu'
 
@@ -31,7 +32,7 @@ export default function Sidebar({
   navItems,
   userName,
   userEmail,
-  primaryColor = '#000000',
+  primaryColor = '#F5F5F5',
   onLogout,
   onEditarPerfil,
   onGerenciarPlano,
@@ -42,15 +43,15 @@ export default function Sidebar({
 
   return (
     <aside
-      style={{ position: 'fixed', top: 0, left: 0, width: '256px', height: '100vh', zIndex: 10, background: primaryColor }}
+      style={{ position: 'fixed', top: 0, left: 0, width: '256px', height: '100vh', zIndex: 10, background: primaryColor, borderRight: '1px solid #E5E5E5' }}
       className="flex flex-col"
     >
       {/* Logo */}
       <div className="flex justify-center pt-6 pb-5 px-4">
-        <span className="text-white font-black text-4xl tracking-tighter select-none">168</span>
+        <Image src="/168_principal.png" alt="168" width={150} height={60} className="object-contain" priority />
       </div>
 
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }} />
+      <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)' }} />
 
       {/* Nav */}
       <nav className="flex-1 px-2 py-3 overflow-y-auto space-y-0.5">
@@ -63,10 +64,12 @@ export default function Sidebar({
               href={item.href}
               className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors"
               style={{
-                background: active ? 'rgba(255,255,255,0.15)' : 'transparent',
-                color: active ? '#FFFFFF' : 'rgba(255,255,255,0.65)',
+                background: active ? '#E5E5E5' : 'transparent',
+                color: active ? '#000000' : 'rgba(0,0,0,0.6)',
                 fontWeight: active ? 600 : 400,
               }}
+              onMouseEnter={e => { if (!active) e.currentTarget.style.background = '#E5E5E5' }}
+              onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent' }}
             >
               <span className="flex-shrink-0">{item.icon}</span>
               <span className="flex-1">{item.label}</span>
@@ -83,7 +86,7 @@ export default function Sidebar({
         })}
       </nav>
 
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }} />
+      <div style={{ borderTop: '1px solid rgba(0,0,0,0.08)' }} />
 
       {/* Rodapé: avatar + SAACS */}
       <div className="px-2 py-2">
@@ -91,7 +94,6 @@ export default function Sidebar({
           nomeExibido={userName || userEmail}
           email={userEmail}
           initials={initials(userName || userEmail)}
-          dark
           onEditarPerfil={onEditarPerfil}
           onGerenciarPlano={onGerenciarPlano}
           onUsoCredits={onUsoCredits}
@@ -99,8 +101,8 @@ export default function Sidebar({
         />
       </div>
 
-      <div className="flex flex-col items-center gap-1 py-3" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
-        <span className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.3)' }}>SAACS.AI</span>
+      <div className="flex flex-col items-center gap-1 py-3" style={{ borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+        <span className="text-[10px] font-medium" style={{ color: 'rgba(0,0,0,0.35)' }}>SAACS.AI</span>
       </div>
     </aside>
   )

@@ -86,8 +86,8 @@ export default function LoginPage() {
   }
 
   if (mensagem) return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F5F5F5' }}>
-      <div className="rounded-xl shadow-xl w-full max-w-sm overflow-hidden bg-white">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#FFFFFF' }}>
+      <div className="rounded-xl shadow-xl w-full max-w-sm overflow-hidden" style={{ background: '#F5F5F5' }}>
         <div className="px-6 pt-8 pb-6 text-center space-y-3">
           <div className="w-12 h-12 rounded-full flex items-center justify-center mx-auto" style={{ background: PRIMARY }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -108,8 +108,8 @@ export default function LoginPage() {
   )
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#F5F5F5' }}>
-      <div className="rounded-xl shadow-xl w-full max-w-sm overflow-hidden bg-white">
+    <div className="min-h-screen flex items-center justify-center p-4" style={{ background: '#FFFFFF' }}>
+      <div className="rounded-xl shadow-xl w-full max-w-sm overflow-hidden" style={{ background: '#F5F5F5' }}>
 
         {/* Logo */}
         <div className="flex justify-center pt-8 pb-5">
@@ -123,7 +123,7 @@ export default function LoginPage() {
           />
         </div>
 
-        <div className="border-t border-gray-100" />
+        <div className="border-t border-gray-200" />
 
         {/* Form */}
         <div className="px-6 py-6">
@@ -143,7 +143,7 @@ export default function LoginPage() {
                 <input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   required autoFocus
-                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
+                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               <div>
@@ -151,7 +151,7 @@ export default function LoginPage() {
                 <input
                   type="password" value={senha} onChange={e => setSenha(e.target.value)}
                   required
-                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
+                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
                 <button
                   type="button"
@@ -177,9 +177,9 @@ export default function LoginPage() {
               </button>
 
               <div className="flex items-center gap-3 pt-1">
-                <div className="flex-1 h-px bg-gray-100" />
+                <div className="flex-1 h-px bg-gray-200" />
                 <span className="text-xs text-gray-400">ou</span>
-                <div className="flex-1 h-px bg-gray-100" />
+                <div className="flex-1 h-px bg-gray-200" />
               </div>
 
               <button
@@ -202,7 +202,7 @@ export default function LoginPage() {
                 <input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   required autoFocus
-                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
+                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               {erro && (
@@ -235,7 +235,7 @@ export default function LoginPage() {
                   type="text" value={nome} onChange={e => setNome(e.target.value)}
                   placeholder="Seu nome completo"
                   required autoFocus
-                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
+                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               <div>
@@ -243,7 +243,7 @@ export default function LoginPage() {
                 <input
                   type="email" value={email} onChange={e => setEmail(e.target.value)}
                   required
-                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
+                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               <div>
@@ -252,7 +252,7 @@ export default function LoginPage() {
                   type="tel" value={whatsapp} onChange={e => setWhatsapp(e.target.value)}
                   placeholder="(11) 99999-9999"
                   required
-                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
+                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               <div>
@@ -260,7 +260,7 @@ export default function LoginPage() {
                 <input
                   type="password" value={senha} onChange={e => setSenha(e.target.value)}
                   required
-                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
+                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               <div>
@@ -268,7 +268,7 @@ export default function LoginPage() {
                 <input
                   type="password" value={senhaConfirm} onChange={e => setSenhaConfirm(e.target.value)}
                   required
-                  className="w-full bg-gray-50 rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
+                  className="w-full bg-white rounded-lg px-3 py-2 text-sm text-gray-900 outline-none border-2 border-gray-200 focus:border-gray-400"
                 />
               </div>
               {erro && (
@@ -301,7 +301,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <div className="border-t border-gray-100" />
+        <div className="border-t border-gray-200" />
 
         {/* Footer */}
         <div className="flex justify-center py-4">
