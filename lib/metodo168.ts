@@ -197,11 +197,12 @@ export async function prepararPlanejamento(tipo: 'semana' | 'dia', dataRef?: str
     fim.setHours(23, 59, 59, 999);
   }
 
-  const [perfil, metas, blocos, agenda] = await Promise.all([
+  const [perfil, metas, blocos, agenda, reunioes] = await Promise.all([
     verPerfil168(),
     listarMetas168('ativa'),
     listarBlocosFixos(true),
     buscarAgendaMultiConta(inicio.toISOString(), fim.toISOString(), 50).catch(() => []),
+    listarReunioes({ desde: inicio.toISOString(), ate: fim.toISOString() }),
   ]);
 
   const blocosDoRecorte = tipo === 'dia'
@@ -214,5 +215,70 @@ export async function prepararPlanejamento(tipo: 'semana' | 'dia', dataRef?: str
     metas,
     blocos: blocosDoRecorte,
     agenda,
+    reunioes,
   };
+}
+
+// Reuniões pontuais (não-recorrentes) — registradas pelo Claude em conversa
+// ("marca uma reunião com fulano dia X às Yh") ou detectadas de outras
+// fontes no futuro (whatsapp, calendar). Distinto de blocos_fixos (que é
+// recorrência semanal) e de buscarAgendaMultiConta (que lê o Google Calendar
+// real, só leitura — isso aqui é o que o PRÓPRIO 168 registra).
+export type Reuniao = {
+  id: string;
+  titulo: string;
+  projeto: string | null;
+  convocado_por: string | null;
+  data_hora_inicio: string;
+  data_hora_fim: string | null;
+  duracao_minutos: number | null;
+  local: string | null;
+  meet_url: string | null;
+  status: 'agendada' | 'em_andamento' | 'concluida' | 'cancelada';
+};
+
+export async function salvarReuniao(reuniao: {
+  id?: string;
+  titulo: string;
+  projeto?: string;
+  convocado_por?: string;
+  data_hora_inicio: string;
+  data_hora_fim?: string;
+  duracao_minutos?: number;
+  local?: string;
+  meet_url?: string;
+  status?: string;
+}): Promise<Reuniao> {
+  const userId = await resolveOwnerUserId();
+  let data_hora_fim = reuniao.data_hora_fim;
+  let duracao_minutos = reuniao.duracao_minutos;
+  if (!data_hora_fim && duracao_minutos) {
+    data_hora_fim = new Date(new Date(reuniao.data_hora_inicio).getTime() + duracao_minutos * 60000).toISOString();
+  } else if (data_hora_fim && !duracao_minutos) {
+    duracao_minutos = Math.round((new Date(data_hora_fim).getTime() - new Date(reuniao.data_hora_inicio).getTime()) / 60000);
+  }
+  const row = { user_id: userId, origem: 'manual', ...reuniao, data_hora_fim, duracao_minutos };
+  const { data, error } = await supabaseAdmin()
+    .from('reunioes')
+    .upsert(row, { onConflict: 'id' })
+    .select('id, titulo, projeto, convocado_por, data_hora_inicio, data_hora_fim, duracao_minutos, local, meet_url, status')
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+export async function listarReunioes(opts: { desde?: string; ate?: string; status?: string } = {}): Promise<Reuniao[]> {
+  const userId = await resolveOwnerUserId();
+  let q = supabaseAdmin()
+    .from('reunioes')
+    .select('id, titulo, projeto, convocado_por, data_hora_inicio, data_hora_fim, duracao_minutos, local, meet_url, status')
+    .eq('user_id', userId)
+    .order('data_hora_inicio');
+  if (opts.desde) q = q.gte('data_hora_inicio', opts.desde);
+  if (opts.ate) q = q.lte('data_hora_inicio', opts.ate);
+  if (opts.status) q = q.eq('status', opts.status);
+  else q = q.neq('status', 'cancelada');
+  const { data, error } = await q;
+  if (error) throw new Error(error.message);
+  return data ?? [];
 }

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { supabaseAdmin, resolveOwnerUserId } from '@/lib/owner';
 import { buscarEmailsMultiConta, buscarAgendaMultiConta } from '@/lib/gmail-accounts';
 import { buscarMensagensWhatsapp, excluirContatoWhatsapp, listarContatosExcluidosWhatsapp } from '@/lib/whatsapp';
-import { verPerfil168, atualizarPacto168, listarMetas168, salvarMeta168, listarBlocosFixos, salvarBlocoFixo, prepararPlanejamento, marcarRitualFeito } from '@/lib/metodo168';
+import { verPerfil168, atualizarPacto168, listarMetas168, salvarMeta168, listarBlocosFixos, salvarBlocoFixo, prepararPlanejamento, marcarRitualFeito, salvarReuniao, listarReunioes } from '@/lib/metodo168';
 
 const METODO_168 =
   'MÉTODO 168: as 168h da semana são o recurso fixo. Regra de ouro — nunca pergunte "onde cabe?", ' +
@@ -423,8 +423,9 @@ const handler = createMcpHandler(
       {
         description:
           'Junta tudo que o Ritual de Planejamento precisa num só lugar: Pacto, metas ativas, ' +
-          'blocos fixos do período, e os compromissos reais de agenda. Use isso quando o usuário ' +
-          'pedir pra planejar a semana (ritual semanal, idealmente num dia fixo escolhido por ele) ' +
+          'blocos fixos do período, compromissos do Google Calendar, e reuniões pontuais que o ' +
+          'próprio usuário registrou via salvar_reuniao. Use isso quando o usuário pedir pra ' +
+          'planejar a semana (ritual semanal, idealmente num dia fixo escolhido por ele) ' +
           'ou planejar o dia (ritual diário — a primeira coisa a fazer de manhã). Depois de chamar, ' +
           'conduza a conversa de planejamento com o usuário (não é formulário, é diálogo) e monte um ' +
           'Artifact com o resultado se a superfície suportar — a grade fixa no dashboard foi cortada ' +
@@ -463,6 +464,61 @@ const handler = createMcpHandler(
         try {
           await marcarRitualFeito(tipo);
           return { content: [{ type: 'text', text: `Ritual de ${tipo === 'dia' ? 'planejamento diário' : 'planejamento semanal'} registrado como concluído hoje.` }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'salvar_reuniao',
+      {
+        description:
+          'Registra uma reunião pontual (não-recorrente) — ex: "marca uma reunião com o Isnaldo dia ' +
+          '15/12 às 15h online". Use quando o usuário pedir pra agendar/registrar um compromisso ' +
+          'específico com data e hora marcadas, diferente de um bloco fixo semanal (isso é ' +
+          'salvar_bloco_fixo) e diferente de um convite real do Google Calendar (essa integração é ' +
+          'só leitura — isto aqui é o 168 registrando por conta própria, a partir da conversa). ' +
+          'Aparece automaticamente em preparar_planejamento pro período certo. Informe duracao_minutos ' +
+          'OU data_hora_fim (não precisa dos dois).',
+        inputSchema: z.object({
+          id: z.string().optional().describe('Omitir pra criar nova; informar pra atualizar uma existente.'),
+          titulo: z.string().describe('Ex: "Reunião com Isnaldo".'),
+          projeto: z.string().optional().describe('Ex: "CooperaMais", se houver.'),
+          convocado_por: z.string().optional(),
+          data_hora_inicio: z.string().describe('ISO 8601, ex: "2026-12-15T15:00:00-03:00".'),
+          data_hora_fim: z.string().optional().describe('ISO 8601. Omitir se informar duracao_minutos.'),
+          duracao_minutos: z.number().optional().describe('Padrão razoável se não informado pelo usuário: 60min.'),
+          local: z.string().optional().describe('"presencial", "google_meet", ou uma URL.'),
+          meet_url: z.string().optional(),
+          status: z.enum(['agendada', 'em_andamento', 'concluida', 'cancelada']).optional(),
+        }),
+      },
+      async (reuniao) => {
+        try {
+          const salva = await salvarReuniao(reuniao);
+          return { content: [{ type: 'text', text: JSON.stringify(salva, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'listar_reunioes',
+      {
+        description: 'Lista reuniões pontuais registradas, opcionalmente filtradas por período ou status.',
+        inputSchema: z.object({
+          desde: z.string().optional().describe('ISO 8601.'),
+          ate: z.string().optional().describe('ISO 8601.'),
+          status: z.enum(['agendada', 'em_andamento', 'concluida', 'cancelada']).optional().describe('Omitir pra trazer todas menos as canceladas.'),
+        }),
+      },
+      async ({ desde, ate, status }) => {
+        try {
+          const reunioes = await listarReunioes({ desde, ate, status });
+          if (!reunioes.length) return { content: [{ type: 'text', text: 'Nenhuma reunião encontrada.' }] };
+          return { content: [{ type: 'text', text: JSON.stringify(reunioes, null, 2) }] };
         } catch (e) {
           return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
         }
