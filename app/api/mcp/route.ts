@@ -1,4 +1,5 @@
 import { createMcpHandler } from 'mcp-handler';
+import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { supabaseAdmin, resolveOwnerUserId } from '@/lib/owner';
 import { buscarEmailsMultiConta, buscarAgendaMultiConta } from '@/lib/gmail-accounts';
@@ -634,4 +635,27 @@ const handler = createMcpHandler(
   }
 );
 
-export { handler as GET, handler as POST };
+// Trava mínima: a URL fica desconhecida pra qualquer um além do dono, mas
+// isso aqui não é segurança de verdade (não é OAuth, não distingue usuários)
+// — só fecha o caso "alguém adivinha/acha a URL pública". Aceita token via
+// query (?key=...) pra clientes que só configuram URL (ex: Connectors do
+// claude.ai) ou via header Authorization pra quem suporta (Claude Code).
+function autorizado(req: NextRequest): boolean {
+  const esperado = process.env.MCP_ACCESS_TOKEN;
+  if (!esperado) return true; // sem token configurado, não bloqueia (evita lockout acidental)
+  const porQuery = req.nextUrl.searchParams.get('key');
+  const porHeader = req.headers.get('authorization')?.replace('Bearer ', '');
+  return porQuery === esperado || porHeader === esperado;
+}
+
+async function GET(req: NextRequest) {
+  if (!autorizado(req)) return NextResponse.json({ error: 'não autorizado' }, { status: 401 });
+  return handler(req);
+}
+
+async function POST(req: NextRequest) {
+  if (!autorizado(req)) return NextResponse.json({ error: 'não autorizado' }, { status: 401 });
+  return handler(req);
+}
+
+export { GET, POST };
