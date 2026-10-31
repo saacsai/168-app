@@ -2,6 +2,7 @@ import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
 import { supabaseAdmin, resolveOwnerUserId } from '@/lib/owner';
 import { buscarEmailsMultiConta, buscarAgendaMultiConta } from '@/lib/gmail-accounts';
+import { buscarMensagensWhatsapp } from '@/lib/whatsapp';
 
 const handler = createMcpHandler(
   server => {
@@ -163,6 +164,37 @@ const handler = createMcpHandler(
           return { content: [{ type: 'text', text: JSON.stringify(eventos, null, 2) }] };
         } catch (e) {
           return { content: [{ type: 'text', text: `Erro ao buscar agenda: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+    server.registerTool(
+      'buscar_whatsapp',
+      {
+        description:
+          'Lê mensagens de WhatsApp já recebidas (ingeridas em segundo plano via webhook). Só ' +
+          'leitura — nunca envia ou responde mensagem, essa ferramenta não tem essa capacidade. Use ' +
+          'pra checar "o que chegou no grupo X", "tenho mensagem pendente de alguém importante", ' +
+          'triagem de ruído vs sinal (ex: grupo de 50 pessoas: a maioria é aviso genérico, poucas ' +
+          'mensagens são urgentes de verdade — classifique isso você mesmo ao ler o conteúdo, relativo ' +
+          'à grade de compromissos do usuário).',
+        inputSchema: z.object({
+          desde: z.string().optional().describe('ISO 8601 — só mensagens a partir desse momento.'),
+          contato: z.string().optional().describe('Filtra por nome de contato/grupo ou número (busca parcial).'),
+          apenasGrupos: z.boolean().optional().describe('Se true, só mensagens de grupos.'),
+          apenasRecebidas: z.boolean().optional().describe('Se true, exclui mensagens enviadas pelo próprio usuário.'),
+          busca: z.string().optional().describe('Busca parcial no texto da mensagem.'),
+          maxResults: z.number().int().min(1).max(100).optional().default(30),
+        }),
+      },
+      async ({ desde, contato, apenasGrupos, apenasRecebidas, busca, maxResults }) => {
+        try {
+          const msgs = await buscarMensagensWhatsapp({ desde, contato, apenasGrupos, apenasRecebidas, busca, maxResults });
+          if (!msgs.length) {
+            return { content: [{ type: 'text', text: 'Nenhuma mensagem encontrada (ou WhatsApp ainda não conectado/sincronizando).' }] };
+          }
+          return { content: [{ type: 'text', text: JSON.stringify(msgs, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro ao buscar mensagens: ${String(e)}` }], isError: true };
         }
       }
     );
