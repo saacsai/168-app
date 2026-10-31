@@ -52,12 +52,12 @@ export async function POST(req: NextRequest) {
   if (!instanceName) return NextResponse.json({ ok: true, ignorado: 'sem instance' });
 
   const sb = supabaseAdmin();
-  const { data: inst, error: instError } = await sb
+  const { data: inst } = await sb
     .from('instances')
     .select('user_id')
     .eq('instance_name', instanceName)
     .single();
-  if (!inst) return NextResponse.json({ ok: true, ignorado: 'instância sem owner', debug: instError?.message });
+  if (!inst) return NextResponse.json({ ok: true, ignorado: 'instância sem owner' });
 
   const mensagens = Array.isArray(payload.data) ? payload.data : payload.data ? [payload.data] : [];
   if (!mensagens.length) return NextResponse.json({ ok: true, ignorado: 'sem data' });
