@@ -3,6 +3,15 @@ import { z } from 'zod';
 import { supabaseAdmin, resolveOwnerUserId } from '@/lib/owner';
 import { buscarEmailsMultiConta, buscarAgendaMultiConta } from '@/lib/gmail-accounts';
 import { buscarMensagensWhatsapp, excluirContatoWhatsapp, listarContatosExcluidosWhatsapp } from '@/lib/whatsapp';
+import { verPerfil168, atualizarPacto168, listarMetas168, salvarMeta168, listarBlocosFixos, salvarBlocoFixo, prepararPlanejamento } from '@/lib/metodo168';
+
+const METODO_168 =
+  'MÉTODO 168: as 168h da semana são o recurso fixo. Regra de ouro — nunca pergunte "onde cabe?", ' +
+  'pergunte "o que cede?": toda demanda nova compete por tempo que já está (ou deveria estar) ' +
+  'alocado, nunca cai em espaço vazio. Matriz T×D: Sono (padrão 56h, inegociável) + esfera TEMPO ' +
+  '(Cuidar de Mim, Cuidar da Família) + esfera DINHEIRO (Trabalho, Patrimônio/Obrigações). Uma ' +
+  'semana sem CUIDAR visível não é ocupada, é furada. Blocos marcados inegociável=true não cedem ' +
+  'pra demanda externa sem negociação explícita com o usuário.';
 
 const handler = createMcpHandler(
   server => {
@@ -113,9 +122,12 @@ const handler = createMcpHandler(
       {
         description:
           'Busca emails nas contas de Gmail conectadas do usuário (podem ser várias — pessoal, ' +
-          'institucional, etc). Só leitura — nunca envia nem responde email. Use query no formato de ' +
-          'busca do Gmail: "newer_than:3d", "from:fulano@email.com", "subject:reunião", ' +
-          '"has:attachment filename:.ics", "is:unread". Combine termos se precisar.',
+          'institucional, etc). Só leitura — nunca envia nem responde email. Calibração do usuário: ' +
+          'cerca de 95% do volume é ruído (newsletter, marketing, notificação automática) e só ~5% ' +
+          'é sinal real — priorize reuniões (convite/.ics), datas de evento e prazos de entrega ao ' +
+          'triar, não liste tudo indiscriminadamente. Use query no formato de busca do Gmail: ' +
+          '"newer_than:3d", "from:fulano@email.com", "subject:reunião", "has:attachment ' +
+          'filename:.ics", "is:unread". Combine termos se precisar.',
         inputSchema: z.object({
           query: z.string().describe('Query de busca no formato do Gmail.'),
           conta: z
@@ -172,11 +184,14 @@ const handler = createMcpHandler(
       {
         description:
           'Lê mensagens de WhatsApp já recebidas (ingeridas em segundo plano via webhook). Só ' +
-          'leitura — nunca envia ou responde mensagem, essa ferramenta não tem essa capacidade. Use ' +
-          'pra checar "o que chegou no grupo X", "tenho mensagem pendente de alguém importante", ' +
-          'triagem de ruído vs sinal (ex: grupo de 50 pessoas: a maioria é aviso genérico, poucas ' +
-          'mensagens são urgentes de verdade — classifique isso você mesmo ao ler o conteúdo, relativo ' +
-          'à grade de compromissos do usuário).',
+          'leitura — nunca envia ou responde mensagem, essa ferramenta não tem essa capacidade. ' +
+          'Calibração do usuário sobre onde está o sinal: em conversas 1:1, ~20% das mensagens ' +
+          'respondem por ~80% do que importa pra gestão de tempo dele (regra 80/20) — o resto é ' +
+          'conversa social. Em grupos, a proporção é mais extrema: ~95% é ruído, só ~5% é sinal ' +
+          'real (normalmente reuniões marcadas, datas de evento, prazo de entrega, material/anexo ' +
+          'relevante). Use isso pra triar com peso adequado, não liste tudo com a mesma prioridade ' +
+          '— classifique sempre relativo à grade de compromissos do usuário (ver ver_metodo_168), ' +
+          'não isoladamente.',
         inputSchema: z.object({
           desde: z.string().optional().describe('ISO 8601 — só mensagens a partir desse momento.'),
           contato: z.string().optional().describe('Filtra por nome de contato/grupo ou número (busca parcial).'),
@@ -235,6 +250,190 @@ const handler = createMcpHandler(
           const contatos = await listarContatosExcluidosWhatsapp();
           if (!contatos.length) return { content: [{ type: 'text', text: 'Nenhum contato excluído.' }] };
           return { content: [{ type: 'text', text: JSON.stringify(contatos, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'ver_metodo_168',
+      {
+        description:
+          METODO_168 +
+          ' Esta ferramenta devolve o estado atual do método pro usuário: o Pacto (briefing, ' +
+          'distribuição das 168h), as metas ativas por esfera/horizonte, e os blocos fixos ' +
+          '(inegociáveis). Chame isso no início de qualquer conversa onde o usuário mencione agenda, ' +
+          'tempo, prioridade ou equilíbrio de vida — é o contexto que faltava pra decisões serem ' +
+          'relativas à grade real dele, não genéricas. Se pacto_aceito vier false ou o perfil vier ' +
+          'nulo, o usuário ainda não passou pelo Pacto — conduza a conversa de onboarding (pergunte ' +
+          'o que travou, o que mudou, como quer distribuir as 168h) e registre com atualizar_pacto_168.',
+        inputSchema: z.object({}),
+      },
+      async () => {
+        try {
+          const [perfil, metas, blocos] = await Promise.all([
+            verPerfil168(),
+            listarMetas168('ativa'),
+            listarBlocosFixos(true),
+          ]);
+          return { content: [{ type: 'text', text: JSON.stringify({ perfil, metas, blocos }, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'atualizar_pacto_168',
+      {
+        description:
+          'Atualiza o Pacto do usuário (briefing de vida + distribuição das 168h por esfera). Use ' +
+          'de forma incremental, campo a campo, conforme a conversa for revelando — nunca peça tudo ' +
+          'de uma vez como formulário. horas_cuidar_mim + horas_cuidar_familia + horas_trabalho + ' +
+          'horas_sono não precisa somar exatamente 168 (sobra é tempo ainda não decidido), mas ' +
+          'avise o usuário se a soma de Trabalho estiver consumindo quase tudo que sobra do Sono — ' +
+          'isso é o sintoma da "Armadilha das Obrigações" que o método descreve.',
+        inputSchema: z.object({
+          pacto_aceito: z.boolean().optional().describe('true quando o usuário aceitar explicitamente a premissa filosófica do método.'),
+          o_que_travou: z.string().optional().describe('Resposta à pergunta "o que travou nos últimos anos apesar do esforço?"'),
+          o_que_mudou: z.string().optional().describe('Resposta à pergunta "o que mudou que te trouxe até aqui?"'),
+          horas_sono: z.number().optional(),
+          horas_cuidar_mim: z.number().optional(),
+          horas_cuidar_familia: z.number().optional(),
+          horas_trabalho: z.number().optional(),
+        }),
+      },
+      async (campos) => {
+        try {
+          await atualizarPacto168(campos);
+          return { content: [{ type: 'text', text: 'Pacto atualizado.' }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'salvar_meta_168',
+      {
+        description:
+          'Registra ou atualiza uma meta do usuário, sempre classificada por esfera × horizonte ' +
+          '(Matriz T×D). Ao criar, traduza o objetivo genérico do usuário pro formato SMART e ' +
+          'identifique o custo de oportunidade — pergunte "o que cede pra abrir espaço pra isso?" ' +
+          'e registre em o_que_eliminar. Ex: "quero emagrecer" → meta_smart: "perder 10kg em 1 ano" ' +
+          '→ o_que_eliminar: "3h/semana que hoje vão pra Netflix viram treino".',
+        inputSchema: z.object({
+          id: z.string().optional().describe('Omitir pra criar nova; informar pra atualizar uma existente.'),
+          esfera: z.enum(['cuidar_mim', 'cuidar_familia', 'trabalho', 'patrimonio']),
+          horizonte: z.enum(['1_ano', '5_anos', '10_anos']),
+          titulo: z.string(),
+          descricao: z.string().optional(),
+          meta_smart: z.string().optional().describe('Versão estruturada e mensurável da meta.'),
+          o_que_eliminar: z.string().optional().describe('Custo de oportunidade identificado — o que cede pra essa meta existir.'),
+          status: z.enum(['ativa', 'pausada', 'concluida']).optional(),
+        }),
+      },
+      async (meta) => {
+        try {
+          const salva = await salvarMeta168(meta);
+          return { content: [{ type: 'text', text: JSON.stringify(salva, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'listar_metas_168',
+      {
+        description: 'Lista as metas do usuário, opcionalmente filtradas por status (padrão: só ativas).',
+        inputSchema: z.object({
+          status: z.enum(['ativa', 'pausada', 'concluida', 'todas']).optional().default('ativa'),
+        }),
+      },
+      async ({ status }) => {
+        try {
+          const metas = await listarMetas168(status);
+          return { content: [{ type: 'text', text: JSON.stringify(metas, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'salvar_bloco_fixo',
+      {
+        description:
+          'Registra ou atualiza um bloco fixo (inegociável) da rotina — ex: academia, sono, estudo, ' +
+          'família. Um bloco inegociável não cede pra demanda externa sem negociação explícita com ' +
+          'o usuário (regra de ouro do método). hora_inicio/hora_fim devem incluir o "tempo satélite" ' +
+          '(deslocamento ida/volta, banho, preparação) — não só a atividade pura.',
+        inputSchema: z.object({
+          id: z.string().optional().describe('Omitir pra criar novo; informar pra atualizar um existente.'),
+          label: z.string().describe('Ex: "Academia", "Inglês", "Direito".'),
+          esfera: z.enum(['cuidar_mim', 'cuidar_familia', 'trabalho', 'patrimonio', 'sono']),
+          dias_semana: z.array(z.number().int().min(0).max(6)).describe('0=domingo ... 6=sábado.'),
+          hora_inicio: z.string().describe('HH:MM, horário real de início (inclui deslocamento).'),
+          hora_fim: z.string().describe('HH:MM, horário real de fim (inclui complementares).'),
+          inegociavel: z.boolean().optional().default(true),
+          tempo_atividade_min: z.number().optional(),
+          tempo_deslocamento_ida_min: z.number().optional(),
+          tempo_deslocamento_volta_min: z.number().optional(),
+          tempo_complementar_min: z.number().optional(),
+        }),
+      },
+      async (bloco) => {
+        try {
+          const salvo = await salvarBlocoFixo(bloco);
+          return { content: [{ type: 'text', text: JSON.stringify(salvo, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'listar_blocos_fixos',
+      {
+        description: 'Lista os blocos fixos (inegociáveis) do usuário.',
+        inputSchema: z.object({
+          apenasAtivos: z.boolean().optional().default(true),
+        }),
+      },
+      async ({ apenasAtivos }) => {
+        try {
+          const blocos = await listarBlocosFixos(apenasAtivos);
+          return { content: [{ type: 'text', text: JSON.stringify(blocos, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'preparar_planejamento',
+      {
+        description:
+          'Junta tudo que o Ritual de Planejamento precisa num só lugar: Pacto, metas ativas, ' +
+          'blocos fixos do período, e os compromissos reais de agenda. Use isso quando o usuário ' +
+          'pedir pra planejar a semana (ritual semanal, idealmente num dia fixo escolhido por ele) ' +
+          'ou planejar o dia (ritual diário — a primeira coisa a fazer de manhã). Depois de chamar, ' +
+          'conduza a conversa de planejamento com o usuário (não é formulário, é diálogo) e monte um ' +
+          'Artifact com o resultado se a superfície suportar — a grade fixa no dashboard foi cortada ' +
+          'de propósito, o plano nasce sob demanda. Pra enriquecer com sinal externo (reuniões ' +
+          'marcadas por terceiros, prazos, entregas), complemente chamando buscar_emails/' +
+          'buscar_whatsapp/buscar_agenda à parte.',
+        inputSchema: z.object({
+          tipo: z.enum(['semana', 'dia']),
+          data: z.string().optional().describe('ISO 8601 — data de referência. Omitir pra usar hoje.'),
+        }),
+      },
+      async ({ tipo, data }) => {
+        try {
+          const plano = await prepararPlanejamento(tipo, data);
+          return { content: [{ type: 'text', text: JSON.stringify(plano, null, 2) }] };
         } catch (e) {
           return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
         }
