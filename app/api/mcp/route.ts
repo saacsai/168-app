@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { supabaseAdmin, resolveOwnerUserId } from '@/lib/owner';
 import { buscarEmailsMultiConta, buscarAgendaMultiConta } from '@/lib/gmail-accounts';
 import { buscarMensagensWhatsapp, excluirContatoWhatsapp, listarContatosExcluidosWhatsapp } from '@/lib/whatsapp';
-import { verPerfil168, atualizarPacto168, listarMetas168, salvarMeta168, listarBlocosFixos, salvarBlocoFixo, prepararPlanejamento, marcarRitualFeito, salvarReuniao, listarReunioes } from '@/lib/metodo168';
+import { verPerfil168, atualizarPacto168, listarMetas168, salvarMeta168, listarBlocosFixos, salvarBlocoFixo, prepararPlanejamento, marcarRitualFeito, salvarReuniao, listarReunioes, confirmarPlanoDia, registrarAuditoriaDiaria } from '@/lib/metodo168';
 
 const METODO_168 =
   'MÉTODO 168: as 168h da semana são o recurso fixo. Regra de ouro — nunca pergunte "onde cabe?", ' +
@@ -325,19 +325,23 @@ const handler = createMcpHandler(
       {
         description:
           'Registra ou atualiza uma meta do usuário, sempre classificada por esfera × horizonte ' +
-          '(Matriz T×D). Ao criar, traduza o objetivo genérico do usuário pro formato SMART e ' +
-          'identifique o custo de oportunidade — pergunte "o que cede pra abrir espaço pra isso?" ' +
-          'e registre em o_que_eliminar. Ex: "quero emagrecer" → meta_smart: "perder 10kg em 1 ano" ' +
-          '→ o_que_eliminar: "3h/semana que hoje vão pra Netflix viram treino".',
+          '(Matriz T×D). PREFIRA horizonte "semana" como padrão — compromisso com data, concreto e ' +
+          'verificável (ex: "correr 10km essa semana", "estudar 2h de Direito") é o que gera o maior ' +
+          'ganho do método: compromisso consigo mesmo em vez de intenção solta. Metas de 1/5/10 anos ' +
+          'continuam existindo mas não são obrigatórias — só registre se o usuário trouxer isso ' +
+          'espontaneamente, não force o exercício de longo prazo. Ao criar, traduza o objetivo ' +
+          'genérico do usuário pro formato SMART e identifique o custo de oportunidade — pergunte ' +
+          '"o que cede pra abrir espaço pra isso?" e registre em o_que_eliminar.',
         inputSchema: z.object({
           id: z.string().optional().describe('Omitir pra criar nova; informar pra atualizar uma existente.'),
           esfera: z.enum(['cuidar_mim', 'cuidar_familia', 'trabalho', 'patrimonio']),
-          horizonte: z.enum(['1_ano', '5_anos', '10_anos']),
+          horizonte: z.enum(['semana', '1_ano', '5_anos', '10_anos']),
           titulo: z.string(),
           descricao: z.string().optional(),
           meta_smart: z.string().optional().describe('Versão estruturada e mensurável da meta.'),
           o_que_eliminar: z.string().optional().describe('Custo de oportunidade identificado — o que cede pra essa meta existir.'),
           status: z.enum(['ativa', 'pausada', 'concluida']).optional(),
+          semana_referencia: z.string().optional().describe('YYYY-MM-DD da segunda-feira da semana, só pra horizonte "semana". Omitir usa a semana atual.'),
         }),
       },
       async (meta) => {
@@ -353,14 +357,15 @@ const handler = createMcpHandler(
     server.registerTool(
       'listar_metas_168',
       {
-        description: 'Lista as metas do usuário, opcionalmente filtradas por status (padrão: só ativas).',
+        description: 'Lista as metas do usuário, opcionalmente filtradas por status e/ou pela semana (horizonte "semana").',
         inputSchema: z.object({
           status: z.enum(['ativa', 'pausada', 'concluida', 'todas']).optional().default('ativa'),
+          semana_referencia: z.string().optional().describe('YYYY-MM-DD da segunda-feira — filtra só metas semanais daquela semana.'),
         }),
       },
-      async ({ status }) => {
+      async ({ status, semana_referencia }) => {
         try {
-          const metas = await listarMetas168(status);
+          const metas = await listarMetas168(status, semana_referencia);
           return { content: [{ type: 'text', text: JSON.stringify(metas, null, 2) }] };
         } catch (e) {
           return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
@@ -519,6 +524,76 @@ const handler = createMcpHandler(
           const reunioes = await listarReunioes({ desde, ate, status });
           if (!reunioes.length) return { content: [{ type: 'text', text: 'Nenhuma reunião encontrada.' }] };
           return { content: [{ type: 'text', text: JSON.stringify(reunioes, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'confirmar_plano_dia',
+      {
+        description:
+          'Tira a "foto" do plano do dia logo que ele for combinado com o usuário — chame isso ao ' +
+          'FINAL da conversa de preparar_planejamento tipo "dia" (ou sempre que o usuário descrever ' +
+          'o que pretende fazer hoje, mesmo informalmente: "hoje de manhã vou fazer A e B, de tarde ' +
+          'C e D"). Sem essa foto, não tem como confrontar o planejado com o realizado no dia ' +
+          'seguinte (ver registrar_auditoria_diaria) — não pule esse passo.',
+        inputSchema: z.object({
+          data: z.string().describe('YYYY-MM-DD, o dia sendo planejado (normalmente hoje).'),
+          blocosPlanejados: z.array(z.object({
+            label: z.string().describe('Nome curto da atividade, ex: "Atividade A".'),
+            esfera: z.string().optional(),
+            inicio: z.string().optional().describe('HH:MM esperado.'),
+            fim: z.string().optional().describe('HH:MM esperado.'),
+          })).describe('Tudo que foi combinado pro dia, na ordem que fizer sentido.'),
+        }),
+      },
+      async ({ data, blocosPlanejados }) => {
+        try {
+          await confirmarPlanoDia(data, blocosPlanejados);
+          return { content: [{ type: 'text', text: `Plano de ${data} registrado (${blocosPlanejados.length} itens).` }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'registrar_auditoria_diaria',
+      {
+        description:
+          'AUDITORIA NOTURNA — o coração do método, não um formulário passivo. Use quando o usuário ' +
+          'relatar o que aconteceu num dia já planejado (normalmente no dia seguinte, antes de ' +
+          'planejar o novo dia). Passe em blocosRealizados TODOS os itens que estavam no plano, cada ' +
+          'um com realizado=true/false — a ferramenta calcula sozinha o que ficou pra trás e devolve ' +
+          'em blocos_perdidos, junto com as metas da semana (metas_semana_em_risco) pra você cruzar. ' +
+          'DEPOIS de chamar, se blocos_perdidos não vier vazio, você É OBRIGADO a: (1) perguntar o ' +
+          'que acontece com cada item perdido — realocar essa semana, empurrar pra próxima, ou ' +
+          'abandonar de propósito; nunca deixar passar batido. (2) Se algo estourou muito do tempo ' +
+          'previsto (ex: uma atividade tomou o dobro do esperado), perguntar o motivo oferecendo 3 ' +
+          'categorias — erro de planejamento, erro de execução, ou procrastinação — sem aceitar ' +
+          'desculpa abstrata, e registrar a resposta real do usuário em motivoDeclarado. (3) Se a ' +
+          'realocação decidida empurrar algo pra outro dia, checar contra metas_semana_em_risco se ' +
+          'isso compromete alguma meta da semana e avisar explicitamente, não mover em silêncio.',
+        inputSchema: z.object({
+          data: z.string().describe('YYYY-MM-DD, o dia sendo auditado (normalmente ontem).'),
+          blocosRealizados: z.array(z.object({
+            label: z.string(),
+            esfera: z.string().optional(),
+            inicio: z.string().optional(),
+            fim: z.string().optional(),
+            realizado: z.boolean(),
+          })),
+          motivoDeclarado: z.string().optional().describe('Explicação do usuário pra algo que estourou ou não aconteceu.'),
+          avaliacaoIa: z.enum(['erro_planejamento', 'erro_execucao', 'procrastinacao']).optional().describe('Sua classificação, baseada no que o usuário declarou — não aceite "não deu tempo" sem detalhar.'),
+          servicosPagosNaoUsados: z.array(z.string()).optional().describe('Ex: ["Academia"] se algo pago não foi usado — vazamento patrimonial do método.'),
+        }),
+      },
+      async ({ data, blocosRealizados, motivoDeclarado, avaliacaoIa, servicosPagosNaoUsados }) => {
+        try {
+          const resultado = await registrarAuditoriaDiaria({ data, blocosRealizados, motivoDeclarado, avaliacaoIa, servicosPagosNaoUsados });
+          return { content: [{ type: 'text', text: JSON.stringify(resultado, null, 2) }] };
         } catch (e) {
           return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
         }

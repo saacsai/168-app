@@ -78,22 +78,24 @@ export async function atualizarPacto168(campos: Partial<{
 export type Meta168 = {
   id: string;
   esfera: 'cuidar_mim' | 'cuidar_familia' | 'trabalho' | 'patrimonio';
-  horizonte: '1_ano' | '5_anos' | '10_anos';
+  horizonte: 'semana' | '1_ano' | '5_anos' | '10_anos';
   titulo: string;
   descricao: string | null;
   meta_smart: string | null;
   o_que_eliminar: string | null;
   status: 'ativa' | 'pausada' | 'concluida';
+  semana_referencia: string | null;
 };
 
-export async function listarMetas168(status: string = 'ativa'): Promise<Meta168[]> {
+export async function listarMetas168(status: string = 'ativa', semanaReferencia?: string): Promise<Meta168[]> {
   const userId = await resolveOwnerUserId();
   let q = supabaseAdmin()
     .from('metas_168')
-    .select('id, esfera, horizonte, titulo, descricao, meta_smart, o_que_eliminar, status')
+    .select('id, esfera, horizonte, titulo, descricao, meta_smart, o_que_eliminar, status, semana_referencia')
     .eq('user_id', userId)
     .order('created_at', { ascending: false });
   if (status !== 'todas') q = q.eq('status', status);
+  if (semanaReferencia) q = q.eq('semana_referencia', semanaReferencia);
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   return data ?? [];
@@ -108,13 +110,18 @@ export async function salvarMeta168(meta: {
   meta_smart?: string;
   o_que_eliminar?: string;
   status?: string;
+  semana_referencia?: string;
 }): Promise<Meta168> {
   const userId = await resolveOwnerUserId();
-  const row = { user_id: userId, ...meta, updated_at: new Date().toISOString() };
+  const dados = { ...meta };
+  if (dados.horizonte === 'semana' && !dados.semana_referencia) {
+    dados.semana_referencia = segundaFeiraDe(new Date());
+  }
+  const row = { user_id: userId, ...dados, updated_at: new Date().toISOString() };
   const { data, error } = await supabaseAdmin()
     .from('metas_168')
     .upsert(row, { onConflict: 'id' })
-    .select('id, esfera, horizonte, titulo, descricao, meta_smart, o_que_eliminar, status')
+    .select('id, esfera, horizonte, titulo, descricao, meta_smart, o_que_eliminar, status, semana_referencia')
     .single();
   if (error) throw new Error(error.message);
   return data;
@@ -197,7 +204,9 @@ export async function prepararPlanejamento(tipo: 'semana' | 'dia', dataRef?: str
     fim.setHours(23, 59, 59, 999);
   }
 
-  const [perfil, metas, blocos, agenda, reunioes] = await Promise.all([
+  const segundaDoRecorte = segundaFeiraDe(inicio);
+
+  const [perfil, todasMetas, blocos, agenda, reunioes] = await Promise.all([
     verPerfil168(),
     listarMetas168('ativa'),
     listarBlocosFixos(true),
@@ -205,14 +214,18 @@ export async function prepararPlanejamento(tipo: 'semana' | 'dia', dataRef?: str
     listarReunioes({ desde: inicio.toISOString(), ate: fim.toISOString() }),
   ]);
 
+  const metasLongoPrazo = todasMetas.filter(m => m.horizonte !== 'semana');
+  const metasSemana = todasMetas.filter(m => m.horizonte === 'semana' && m.semana_referencia === segundaDoRecorte);
+
   const blocosDoRecorte = tipo === 'dia'
     ? blocos.filter(b => b.dias_semana.includes(diaSemana))
     : blocos;
 
   return {
-    periodo: { tipo, inicio: inicio.toISOString(), fim: fim.toISOString() },
+    periodo: { tipo, inicio: inicio.toISOString(), fim: fim.toISOString(), semana_referencia: segundaDoRecorte },
     perfil,
-    metas,
+    metasSemana,
+    metasLongoPrazo,
     blocos: blocosDoRecorte,
     agenda,
     reunioes,
@@ -281,4 +294,63 @@ export async function listarReunioes(opts: { desde?: string; ate?: string; statu
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   return data ?? [];
+}
+
+// Auditoria Noturna: confronta plano vs. realizado. Peça 1 (confirmarPlanoDia)
+// tira a "foto" do que foi combinado na conversa de planejamento da manhã;
+// peça 2 (registrarAuditoriaDiaria) compara no dia seguinte, calcula o que
+// ficou pra trás, e devolve as metas da semana junto — pra quem for decidir
+// a realocação (o Claude, em conversa) não esquecer de checar se isso
+// compromete a meta semanal. A ferramenta não decide nada sozinha; só junta
+// os dados pra confrontação acontecer de verdade, não virar formulário.
+
+export type ItemPlanoDia = { label: string; esfera?: string; inicio?: string; fim?: string };
+export type ItemRealizado = ItemPlanoDia & { realizado: boolean };
+
+export async function confirmarPlanoDia(data: string, blocosPlanejados: ItemPlanoDia[]): Promise<void> {
+  const userId = await resolveOwnerUserId();
+  const { error } = await supabaseAdmin()
+    .from('auditoria_diaria')
+    .upsert({ user_id: userId, data, blocos_planejados: blocosPlanejados }, { onConflict: 'user_id,data' });
+  if (error) throw new Error(error.message);
+}
+
+export async function registrarAuditoriaDiaria(opts: {
+  data: string;
+  blocosRealizados: ItemRealizado[];
+  motivoDeclarado?: string;
+  avaliacaoIa?: string;
+  servicosPagosNaoUsados?: string[];
+}) {
+  const userId = await resolveOwnerUserId();
+  const sb = supabaseAdmin();
+
+  const { data: existente } = await sb
+    .from('auditoria_diaria')
+    .select('blocos_planejados')
+    .eq('user_id', userId)
+    .eq('data', opts.data)
+    .maybeSingle();
+
+  const planejados: ItemPlanoDia[] = existente?.blocos_planejados ?? [];
+  const labelsRealizados = new Set(opts.blocosRealizados.filter(b => b.realizado).map(b => b.label));
+  const blocosPerdidos = planejados.filter(p => !labelsRealizados.has(p.label)).map(p => p.label);
+
+  const row = {
+    user_id: userId,
+    data: opts.data,
+    blocos_planejados: planejados,
+    blocos_realizados: opts.blocosRealizados,
+    blocos_perdidos: blocosPerdidos,
+    motivo_declarado: opts.motivoDeclarado ?? null,
+    avaliacao_ia: opts.avaliacaoIa ?? null,
+    servicos_pagos_nao_usados: opts.servicosPagosNaoUsados ?? [],
+  };
+  const { error } = await sb.from('auditoria_diaria').upsert(row, { onConflict: 'user_id,data' });
+  if (error) throw new Error(error.message);
+
+  const segunda = segundaFeiraDe(new Date(opts.data));
+  const metasSemana = await listarMetas168('ativa', segunda);
+
+  return { blocos_perdidos: blocosPerdidos, metas_semana_em_risco: metasSemana };
 }
