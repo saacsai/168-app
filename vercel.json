@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/whatsapp/purge",
+      "schedule": "0 6 * * *"
+    }
+  ]
+}

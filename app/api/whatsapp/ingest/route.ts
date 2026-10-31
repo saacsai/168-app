@@ -62,8 +62,14 @@ export async function POST(req: NextRequest) {
   const mensagens = Array.isArray(payload.data) ? payload.data : payload.data ? [payload.data] : [];
   if (!mensagens.length) return NextResponse.json({ ok: true, ignorado: 'sem data' });
 
+  const { data: excluidos } = await sb
+    .from('whatsapp_contatos_excluidos')
+    .select('remote_jid')
+    .eq('user_id', inst.user_id);
+  const jidsExcluidos = new Set((excluidos ?? []).map(e => e.remote_jid));
+
   const linhas = mensagens
-    .filter(m => m.key?.id && m.key?.remoteJid)
+    .filter(m => m.key?.id && m.key?.remoteJid && !jidsExcluidos.has(m.key.remoteJid))
     .map(m => ({
       user_id: inst.user_id,
       instance_name: instanceName,

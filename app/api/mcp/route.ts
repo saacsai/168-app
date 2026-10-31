@@ -2,7 +2,7 @@ import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
 import { supabaseAdmin, resolveOwnerUserId } from '@/lib/owner';
 import { buscarEmailsMultiConta, buscarAgendaMultiConta } from '@/lib/gmail-accounts';
-import { buscarMensagensWhatsapp } from '@/lib/whatsapp';
+import { buscarMensagensWhatsapp, excluirContatoWhatsapp, listarContatosExcluidosWhatsapp } from '@/lib/whatsapp';
 
 const handler = createMcpHandler(
   server => {
@@ -195,6 +195,48 @@ const handler = createMcpHandler(
           return { content: [{ type: 'text', text: JSON.stringify(msgs, null, 2) }] };
         } catch (e) {
           return { content: [{ type: 'text', text: `Erro ao buscar mensagens: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'excluir_contato_whatsapp',
+      {
+        description:
+          'Marca um contato ou grupo do WhatsApp como excluído — nenhuma mensagem dele entra no ' +
+          'banco a partir de agora (nem temporariamente), nunca mais aparece em buscar_whatsapp. ' +
+          'Use quando o usuário pedir pra nunca mais ler conversas com alguém específico (ex: ' +
+          '"não leia minhas conversas com a Fulana"). Descubra o remoteJid chamando buscar_whatsapp ' +
+          'primeiro, filtrando por contato, e usando o remote_jid retornado. Não apaga mensagens já ' +
+          'gravadas antes da exclusão.',
+        inputSchema: z.object({
+          remoteJid: z.string().describe('O remote_jid exato do contato/grupo (ex: "5511999999999@s.whatsapp.net" ou "...@g.us").'),
+          apelido: z.string().optional().describe('Nome pra lembrar quem é, opcional.'),
+        }),
+      },
+      async ({ remoteJid, apelido }) => {
+        try {
+          await excluirContatoWhatsapp(remoteJid, apelido);
+          return { content: [{ type: 'text', text: `Contato ${apelido ?? remoteJid} excluído — mensagens dele não serão mais gravadas.` }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro ao excluir contato: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'listar_contatos_excluidos_whatsapp',
+      {
+        description: 'Lista os contatos/grupos de WhatsApp atualmente excluídos da ingestão.',
+        inputSchema: z.object({}),
+      },
+      async () => {
+        try {
+          const contatos = await listarContatosExcluidosWhatsapp();
+          if (!contatos.length) return { content: [{ type: 'text', text: 'Nenhum contato excluído.' }] };
+          return { content: [{ type: 'text', text: JSON.stringify(contatos, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
         }
       }
     );

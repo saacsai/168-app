@@ -39,3 +39,24 @@ export async function buscarMensagensWhatsapp(opts: {
   if (error) throw new Error(error.message);
   return data ?? [];
 }
+
+// Contato/grupo nunca mais entra no banco (nem transitoriamente) a partir de
+// agora — checado na ingestão, antes de qualquer insert. Não apaga mensagens
+// já gravadas anteriormente.
+export async function excluirContatoWhatsapp(remoteJid: string, apelido?: string): Promise<void> {
+  const userId = await resolveOwnerUserId();
+  const { error } = await supabaseAdmin()
+    .from('whatsapp_contatos_excluidos')
+    .upsert({ user_id: userId, remote_jid: remoteJid, apelido: apelido ?? null }, { onConflict: 'user_id,remote_jid' });
+  if (error) throw new Error(error.message);
+}
+
+export async function listarContatosExcluidosWhatsapp(): Promise<{ remote_jid: string; apelido: string | null }[]> {
+  const userId = await resolveOwnerUserId();
+  const { data, error } = await supabaseAdmin()
+    .from('whatsapp_contatos_excluidos')
+    .select('remote_jid, apelido')
+    .eq('user_id', userId);
+  if (error) throw new Error(error.message);
+  return data ?? [];
+}
