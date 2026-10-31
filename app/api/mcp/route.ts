@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { supabaseAdmin, resolveOwnerUserId } from '@/lib/owner';
 import { buscarEmailsMultiConta, buscarAgendaMultiConta } from '@/lib/gmail-accounts';
 import { buscarMensagensWhatsapp, excluirContatoWhatsapp, listarContatosExcluidosWhatsapp } from '@/lib/whatsapp';
-import { verPerfil168, atualizarPacto168, listarMetas168, salvarMeta168, listarBlocosFixos, salvarBlocoFixo, prepararPlanejamento } from '@/lib/metodo168';
+import { verPerfil168, atualizarPacto168, listarMetas168, salvarMeta168, listarBlocosFixos, salvarBlocoFixo, prepararPlanejamento, marcarRitualFeito } from '@/lib/metodo168';
 
 const METODO_168 =
   'MÉTODO 168: as 168h da semana são o recurso fixo. Regra de ouro — nunca pergunte "onde cabe?", ' +
@@ -267,7 +267,13 @@ const handler = createMcpHandler(
           'tempo, prioridade ou equilíbrio de vida — é o contexto que faltava pra decisões serem ' +
           'relativas à grade real dele, não genéricas. Se pacto_aceito vier false ou o perfil vier ' +
           'nulo, o usuário ainda não passou pelo Pacto — conduza a conversa de onboarding (pergunte ' +
-          'o que travou, o que mudou, como quer distribuir as 168h) e registre com atualizar_pacto_168.',
+          'o que travou, o que mudou, como quer distribuir as 168h) e registre com atualizar_pacto_168. ' +
+          'IMPORTANTE — autoverificação de ritual: o 168 nunca inicia conversa sozinho (só lê, nunca ' +
+          'envia mensagem), então é no INÍCIO de uma conversa nova que você checa isso. Se ' +
+          'ritual_diario_pendente vier true, proponha fazer o planejamento do dia (preparar_planejamento ' +
+          'tipo "dia") antes de seguir pro resto do pedido do usuário — a não ser que o pedido seja ' +
+          'claramente urgente/pontual, caso em que resolve isso primeiro e propõe o ritual depois. Mesma ' +
+          'lógica pra ritual_semanal_pendente, mas sem insistir todo dia — uma vez por semana basta.',
         inputSchema: z.object({}),
       },
       async () => {
@@ -424,7 +430,9 @@ const handler = createMcpHandler(
           'Artifact com o resultado se a superfície suportar — a grade fixa no dashboard foi cortada ' +
           'de propósito, o plano nasce sob demanda. Pra enriquecer com sinal externo (reuniões ' +
           'marcadas por terceiros, prazos, entregas), complemente chamando buscar_emails/' +
-          'buscar_whatsapp/buscar_agenda à parte.',
+          'buscar_whatsapp/buscar_agenda à parte. Ao terminar a conversa de planejamento com o ' +
+          'usuário, chame marcar_ritual_168 com o mesmo tipo — é o que faz ritual_diario_pendente/' +
+          'ritual_semanal_pendente (ver ver_metodo_168) pararem de pedir repetição no mesmo dia/semana.',
         inputSchema: z.object({
           tipo: z.enum(['semana', 'dia']),
           data: z.string().optional().describe('ISO 8601 — data de referência. Omitir pra usar hoje.'),
@@ -434,6 +442,27 @@ const handler = createMcpHandler(
         try {
           const plano = await prepararPlanejamento(tipo, data);
           return { content: [{ type: 'text', text: JSON.stringify(plano, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'marcar_ritual_168',
+      {
+        description:
+          'Registra que o ritual de planejamento (diário ou semanal) foi concluído com o usuário ' +
+          'hoje. Chame isso ao FINAL da conversa de planejamento conduzida via preparar_planejamento ' +
+          '— nunca antes, só depois que o usuário de fato passou pelo ritual.',
+        inputSchema: z.object({
+          tipo: z.enum(['dia', 'semana']),
+        }),
+      },
+      async ({ tipo }) => {
+        try {
+          await marcarRitualFeito(tipo);
+          return { content: [{ type: 'text', text: `Ritual de ${tipo === 'dia' ? 'planejamento diário' : 'planejamento semanal'} registrado como concluído hoje.` }] };
         } catch (e) {
           return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
         }

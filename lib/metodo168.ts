@@ -14,17 +14,45 @@ export type Perfil168 = {
   horas_cuidar_mim: number | null;
   horas_cuidar_familia: number | null;
   horas_trabalho: number | null;
+  ultimo_ritual_diario: string | null;
+  ultimo_ritual_semanal: string | null;
 };
 
-export async function verPerfil168(): Promise<Perfil168 | null> {
+function segundaFeiraDe(data: Date): string {
+  const d = new Date(data);
+  const diasAteSegunda = (d.getDay() + 6) % 7;
+  d.setDate(d.getDate() - diasAteSegunda);
+  return d.toISOString().slice(0, 10);
+}
+
+export async function verPerfil168(): Promise<(Perfil168 & { ritual_diario_pendente: boolean; ritual_semanal_pendente: boolean }) | null> {
   const userId = await resolveOwnerUserId();
   const { data, error } = await supabaseAdmin()
     .from('perfil_168')
-    .select('pacto_aceito, o_que_travou, o_que_mudou, horas_sono, horas_cuidar_mim, horas_cuidar_familia, horas_trabalho')
+    .select('pacto_aceito, o_que_travou, o_que_mudou, horas_sono, horas_cuidar_mim, horas_cuidar_familia, horas_trabalho, ultimo_ritual_diario, ultimo_ritual_semanal')
     .eq('user_id', userId)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return data;
+  if (!data) return null;
+
+  const hoje = new Date().toISOString().slice(0, 10);
+  const segundaAtual = segundaFeiraDe(new Date());
+
+  return {
+    ...data,
+    ritual_diario_pendente: data.ultimo_ritual_diario !== hoje,
+    ritual_semanal_pendente: !data.ultimo_ritual_semanal || data.ultimo_ritual_semanal < segundaAtual,
+  };
+}
+
+export async function marcarRitualFeito(tipo: 'dia' | 'semana'): Promise<void> {
+  const userId = await resolveOwnerUserId();
+  const hoje = new Date().toISOString().slice(0, 10);
+  const campo = tipo === 'dia' ? 'ultimo_ritual_diario' : 'ultimo_ritual_semanal';
+  const { error } = await supabaseAdmin()
+    .from('perfil_168')
+    .upsert({ user_id: userId, [campo]: hoje }, { onConflict: 'user_id' });
+  if (error) throw new Error(error.message);
 }
 
 export async function atualizarPacto168(campos: Partial<{
