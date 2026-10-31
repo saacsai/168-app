@@ -9,8 +9,9 @@ const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly email';
 
 function redirectUri() {
   // Precisa estar registrado EXATAMENTE assim no Google Cloud Console
-  // (projeto 168-app) pro fluxo funcionar.
-  return 'https://168.saacs.com.br/api/email-accounts/callback';
+  // (projeto 168-app) pro fluxo funcionar. Domínio de marca pessoal, não o
+  // legado saacs.com.br — decisão do Luciano, 2026-10-31.
+  return 'https://168.lucianomaeda.com.br/api/email-accounts/callback';
 }
 
 export function buildGoogleAuthUrl(apelido: string) {
