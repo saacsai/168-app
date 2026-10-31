@@ -56,7 +56,6 @@ export async function POST(req: NextRequest) {
     .from('instances')
     .select('user_id')
     .eq('instance_name', instanceName)
-    .eq('active', true)
     .single();
   if (!inst) return NextResponse.json({ ok: true, ignorado: 'instância sem owner' });
 
