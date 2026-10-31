@@ -1,32 +1,7 @@
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
-import { createClient } from '@supabase/supabase-js';
-
-// TODO (próximo incremento, junto com o billing): isso hoje é single-user,
-// fixado no e-mail do Luciano — ainda não existe fluxo de OAuth no MCP pra
-// resolver "quem está chamando" por token. Ver docs/adr_mcp_first_desvinculacao_unisol.md.
-const OWNER_EMAIL = 'luciano.maeda@saacs.com.br';
-
-function supabaseAdmin() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_KEY!
-  );
-}
-
-let cachedUserId: string | null = null;
-async function resolveOwnerUserId(): Promise<string> {
-  if (cachedUserId) return cachedUserId;
-  const sb = supabaseAdmin();
-  // auth.admin.listUsers pagina — 168 tem poucos usuários hoje (fase dogfood),
-  // então a primeira página já basta.
-  const { data, error } = await sb.auth.admin.listUsers();
-  if (error) throw new Error(`Falha ao resolver usuário: ${error.message}`);
-  const user = data.users.find(u => u.email === OWNER_EMAIL);
-  if (!user) throw new Error(`Usuário ${OWNER_EMAIL} não encontrado em auth.users.`);
-  cachedUserId = user.id;
-  return user.id;
-}
+import { supabaseAdmin, resolveOwnerUserId } from '@/lib/owner';
+import { buscarEmailsMultiConta } from '@/lib/gmail-accounts';
 
 const handler = createMcpHandler(
   server => {
@@ -129,6 +104,36 @@ const handler = createMcpHandler(
           return { content: [{ type: 'text', text: `Erro: ${error.message}` }], isError: true };
         }
         return { content: [{ type: 'text', text: 'Marcado como resolvido.' }] };
+      }
+    );
+
+    server.registerTool(
+      'buscar_emails',
+      {
+        description:
+          'Busca emails nas contas de Gmail conectadas do usuário (podem ser várias — pessoal, ' +
+          'institucional, etc). Só leitura — nunca envia nem responde email. Use query no formato de ' +
+          'busca do Gmail: "newer_than:3d", "from:fulano@email.com", "subject:reunião", ' +
+          '"has:attachment filename:.ics", "is:unread". Combine termos se precisar.',
+        inputSchema: z.object({
+          query: z.string().describe('Query de busca no formato do Gmail.'),
+          conta: z
+            .string()
+            .optional()
+            .describe('E-mail ou apelido de uma conta específica (ex: "AUA"). Omitir pra buscar em todas as contas conectadas.'),
+          maxResults: z.number().int().min(1).max(50).optional().default(10).describe('Máximo de emails por conta.'),
+        }),
+      },
+      async ({ query, conta, maxResults }) => {
+        try {
+          const emails = await buscarEmailsMultiConta(query, maxResults, conta);
+          if (!emails.length) {
+            return { content: [{ type: 'text', text: 'Nenhum email encontrado (ou nenhuma conta conectada ainda — ver /api/email-accounts/connect).' }] };
+          }
+          return { content: [{ type: 'text', text: JSON.stringify(emails, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro ao buscar emails: ${String(e)}` }], isError: true };
+        }
       }
     );
   },
