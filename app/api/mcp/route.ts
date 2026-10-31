@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { supabaseAdmin, resolveOwnerUserId } from '@/lib/owner';
 import { buscarEmailsMultiConta, buscarAgendaMultiConta } from '@/lib/gmail-accounts';
 import { buscarMensagensWhatsapp, excluirContatoWhatsapp, listarContatosExcluidosWhatsapp } from '@/lib/whatsapp';
-import { verPerfil168, atualizarPacto168, listarMetas168, salvarMeta168, listarBlocosFixos, salvarBlocoFixo, prepararPlanejamento, marcarRitualFeito, salvarReuniao, listarReunioes, confirmarPlanoDia, registrarAuditoriaDiaria } from '@/lib/metodo168';
+import { verPerfil168, atualizarPacto168, listarMetas168, salvarMeta168, listarBlocosFixos, salvarBlocoFixo, prepararPlanejamento, marcarRitualFeito, salvarReuniao, listarReunioes, confirmarPlanoDia, registrarAuditoriaDiaria, gerarRelatorioPeriodico } from '@/lib/metodo168';
 
 const METODO_168 =
   'MÉTODO 168: as 168h da semana são o recurso fixo. Regra de ouro — nunca pergunte "onde cabe?", ' +
@@ -594,6 +594,35 @@ const handler = createMcpHandler(
         try {
           const resultado = await registrarAuditoriaDiaria({ data, blocosRealizados, motivoDeclarado, avaliacaoIa, servicosPagosNaoUsados });
           return { content: [{ type: 'text', text: JSON.stringify(resultado, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+
+    server.registerTool(
+      'gerar_relatorio_periodico',
+      {
+        description:
+          'Espelho pra trás do preparar_planejamento: junta tudo que aconteceu num período — ' +
+          'auditorias diárias (planejado vs. realizado, blocos perdidos, motivos declarados), ' +
+          'reuniões, dados soltos registrados/resolvidos (campos_customizados) e metas semanais do ' +
+          'período. Use quando o usuário pedir um relatório/resumo/retrospectiva de qualquer janela ' +
+          'de tempo (semana, mês, um período específico) sobre qualquer aspecto da vida dele — não ' +
+          'só trabalho/institucional. A ferramenta só agrega dado bruto; você monta a narrativa: ' +
+          'mostre o que foi cumprido vs. não, padrões nos motivos declarados (ex: a mesma atividade ' +
+          'estourando toda semana é sinal de erro de planejamento recorrente, não um dia ruim ' +
+          'isolado), vazamentos patrimoniais (servicos_pagos_nao_usados), e o status real de cada ' +
+          'meta semanal do período. Gere como Artifact se a superfície suportar.',
+        inputSchema: z.object({
+          desde: z.string().describe('YYYY-MM-DD, início do período.'),
+          ate: z.string().describe('YYYY-MM-DD, fim do período.'),
+        }),
+      },
+      async ({ desde, ate }) => {
+        try {
+          const relatorio = await gerarRelatorioPeriodico(desde, ate);
+          return { content: [{ type: 'text', text: JSON.stringify(relatorio, null, 2) }] };
         } catch (e) {
           return { content: [{ type: 'text', text: `Erro: ${String(e)}` }], isError: true };
         }

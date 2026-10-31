@@ -354,3 +354,55 @@ export async function registrarAuditoriaDiaria(opts: {
 
   return { blocos_perdidos: blocosPerdidos, metas_semana_em_risco: metasSemana };
 }
+
+// Espelho pra trás do preparar_planejamento: junta tudo que aconteceu num
+// período (auditorias diárias, reuniões, dados soltos criados/resolvidos,
+// metas semanais do período) pro Claude montar um relatório narrativo —
+// mesma lógica da Skill relatorio-periodico, mas como ferramenta MCP,
+// alcançando qualquer superfície (não só Claude Code). Generaliza pra
+// qualquer aspecto da vida do usuário, não só prestação de contas
+// institucional.
+export async function gerarRelatorioPeriodico(desde: string, ate: string) {
+  const userId = await resolveOwnerUserId();
+  const sb = supabaseAdmin();
+
+  const [auditoriasRes, reunioesPeriodo, dadosRes] = await Promise.all([
+    sb
+      .from('auditoria_diaria')
+      .select('data, blocos_planejados, blocos_realizados, blocos_perdidos, motivo_declarado, avaliacao_ia, servicos_pagos_nao_usados')
+      .eq('user_id', userId)
+      .gte('data', desde)
+      .lte('data', ate)
+      .order('data'),
+    listarReunioes({ desde, ate }),
+    sb
+      .from('campos_customizados')
+      .select('id, categoria, nome, valor, status, created_at, resolvido_em')
+      .eq('user_id', userId)
+      .or(`and(created_at.gte.${desde},created_at.lte.${ate}),and(resolvido_em.gte.${desde},resolvido_em.lte.${ate})`)
+      .order('created_at'),
+  ]);
+
+  if (auditoriasRes.error) throw new Error(auditoriasRes.error.message);
+  if (dadosRes.error) throw new Error(dadosRes.error.message);
+
+  // metas semanais de toda semana que o período tocar (pode cruzar mais de uma)
+  const segundaInicio = segundaFeiraDe(new Date(desde));
+  const segundaFim = segundaFeiraDe(new Date(ate));
+  const { data: metasPeriodo, error: metasError } = await sb
+    .from('metas_168')
+    .select('id, esfera, horizonte, titulo, meta_smart, status, semana_referencia')
+    .eq('user_id', userId)
+    .eq('horizonte', 'semana')
+    .gte('semana_referencia', segundaInicio)
+    .lte('semana_referencia', segundaFim);
+  if (metasError) throw new Error(metasError.message);
+
+  return {
+    periodo: { desde, ate },
+    auditorias: auditoriasRes.data ?? [],
+    reunioes: reunioesPeriodo,
+    metasSemana: metasPeriodo ?? [],
+    dadosRegistrados: dadosRes.data ?? [],
+  };
+}
