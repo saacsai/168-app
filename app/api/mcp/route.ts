@@ -1,7 +1,7 @@
 import { createMcpHandler } from 'mcp-handler';
 import { z } from 'zod';
 import { supabaseAdmin, resolveOwnerUserId } from '@/lib/owner';
-import { buscarEmailsMultiConta } from '@/lib/gmail-accounts';
+import { buscarEmailsMultiConta, buscarAgendaMultiConta } from '@/lib/gmail-accounts';
 
 const handler = createMcpHandler(
   server => {
@@ -133,6 +133,36 @@ const handler = createMcpHandler(
           return { content: [{ type: 'text', text: JSON.stringify(emails, null, 2) }] };
         } catch (e) {
           return { content: [{ type: 'text', text: `Erro ao buscar emails: ${String(e)}` }], isError: true };
+        }
+      }
+    );
+    server.registerTool(
+      'buscar_agenda',
+      {
+        description:
+          'Busca eventos de agenda (Google Calendar) nas contas conectadas do usuário (podem ser ' +
+          'várias — pessoal, institucional, etc). Só leitura — nunca cria, edita ou cancela evento. ' +
+          'Use pra responder "o que tenho hoje/essa semana", "tenho reunião marcada com X", etc. ' +
+          'timeMin e timeMax em ISO 8601 (ex: "2026-11-01T00:00:00-03:00").',
+        inputSchema: z.object({
+          timeMin: z.string().describe('Início do intervalo de busca, ISO 8601.'),
+          timeMax: z.string().describe('Fim do intervalo de busca, ISO 8601.'),
+          conta: z
+            .string()
+            .optional()
+            .describe('E-mail ou apelido de uma conta específica (ex: "AUA"). Omitir pra buscar em todas as contas conectadas.'),
+          maxResults: z.number().int().min(1).max(50).optional().default(20).describe('Máximo de eventos por conta.'),
+        }),
+      },
+      async ({ timeMin, timeMax, conta, maxResults }) => {
+        try {
+          const eventos = await buscarAgendaMultiConta(timeMin, timeMax, maxResults, conta);
+          if (!eventos.length) {
+            return { content: [{ type: 'text', text: 'Nenhum evento encontrado nesse intervalo (ou nenhuma conta com permissão de agenda — pode ser preciso reconectar em /api/email-accounts/connect).' }] };
+          }
+          return { content: [{ type: 'text', text: JSON.stringify(eventos, null, 2) }] };
+        } catch (e) {
+          return { content: [{ type: 'text', text: `Erro ao buscar agenda: ${String(e)}` }], isError: true };
         }
       }
     );

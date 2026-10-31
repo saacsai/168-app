@@ -5,7 +5,8 @@ import { supabaseAdmin, resolveOwnerUserId } from './owner';
 // `contas_email_conectadas`, pra o MCP conseguir ler email em segundo plano, sem
 // depender de sessão de navegador aberta. Só leitura — nunca envia (ver ADR).
 
-const SCOPE = 'https://www.googleapis.com/auth/gmail.readonly email';
+const SCOPE =
+  'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/calendar.readonly email';
 
 function redirectUri() {
   // Precisa estar registrado EXATAMENTE assim no Google Cloud Console
@@ -166,13 +167,8 @@ async function buscarEmailsDeUmaConta(
     });
 }
 
-// Busca em uma conta específica (por e-mail ou apelido) ou em todas as contas
-// conectadas do usuário, em paralelo.
-export async function buscarEmailsMultiConta(
-  query: string,
-  maxResults: number,
-  conta?: string
-): Promise<EmailResumo[]> {
+// Resolve as contas conectadas (todas, ou uma específica por e-mail/apelido).
+async function contasConectadas(conta?: string): Promise<ContaEmail[]> {
   const userId = await resolveOwnerUserId();
   let q = supabaseAdmin()
     .from('contas_email_conectadas')
@@ -180,17 +176,106 @@ export async function buscarEmailsMultiConta(
     .eq('user_id', userId)
     .eq('ativo', true);
   if (conta) q = q.or(`email.eq.${conta},apelido.eq.${conta}`);
-  const { data: contas, error } = await q;
+  const { data, error } = await q;
   if (error) throw new Error(error.message);
-  if (!contas?.length) return [];
+  return (data ?? []) as ContaEmail[];
+}
+
+// Busca em uma conta específica (por e-mail ou apelido) ou em todas as contas
+// conectadas do usuário, em paralelo.
+export async function buscarEmailsMultiConta(
+  query: string,
+  maxResults: number,
+  conta?: string
+): Promise<EmailResumo[]> {
+  const contas = await contasConectadas(conta);
+  if (!contas.length) return [];
 
   const porConta = await Promise.all(
-    (contas as ContaEmail[]).map(async c => {
+    contas.map(async c => {
       try {
         const token = await tokenValido(c);
         return buscarEmailsDeUmaConta(token, c.apelido || c.email, query, maxResults);
       } catch (e) {
         return [{ conta: c.apelido || c.email, id: '', assunto: `Erro: ${String(e)}`, remetente: '', data: '', snippet: '', tem_anexo_ics: false }];
+      }
+    })
+  );
+  return porConta.flat();
+}
+
+type EventoAgenda = {
+  conta: string;
+  id: string;
+  titulo: string;
+  inicio: string;
+  fim: string;
+  local: string;
+  convidados: string[];
+  link_meet: string;
+};
+
+async function buscarEventosDeUmaConta(
+  accessToken: string,
+  contaLabel: string,
+  timeMin: string,
+  timeMax: string,
+  maxResults: number
+): Promise<EventoAgenda[]> {
+  const params = new URLSearchParams({
+    timeMin,
+    timeMax,
+    maxResults: String(maxResults),
+    singleEvents: 'true',
+    orderBy: 'startTime',
+  });
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
+    { headers: { Authorization: `Bearer ${accessToken}` } }
+  );
+  if (!res.ok) return [];
+  const json = await res.json();
+
+  type CalendarEvent = {
+    id: string;
+    summary?: string;
+    start?: { dateTime?: string; date?: string };
+    end?: { dateTime?: string; date?: string };
+    location?: string;
+    attendees?: { email: string }[];
+    hangoutLink?: string;
+  };
+
+  return ((json.items ?? []) as CalendarEvent[]).map(ev => ({
+    conta: contaLabel,
+    id: ev.id,
+    titulo: ev.summary ?? '(sem título)',
+    inicio: ev.start?.dateTime ?? ev.start?.date ?? '',
+    fim: ev.end?.dateTime ?? ev.end?.date ?? '',
+    local: ev.location ?? '',
+    convidados: (ev.attendees ?? []).map(a => a.email),
+    link_meet: ev.hangoutLink ?? '',
+  }));
+}
+
+// Busca eventos de agenda (Google Calendar) em uma conta específica ou em
+// todas as contas conectadas, em paralelo. Só leitura.
+export async function buscarAgendaMultiConta(
+  timeMin: string,
+  timeMax: string,
+  maxResults: number,
+  conta?: string
+): Promise<EventoAgenda[]> {
+  const contas = await contasConectadas(conta);
+  if (!contas.length) return [];
+
+  const porConta = await Promise.all(
+    contas.map(async c => {
+      try {
+        const token = await tokenValido(c);
+        return buscarEventosDeUmaConta(token, c.apelido || c.email, timeMin, timeMax, maxResults);
+      } catch (e) {
+        return [{ conta: c.apelido || c.email, id: '', titulo: `Erro: ${String(e)}`, inicio: '', fim: '', local: '', convidados: [], link_meet: '' }];
       }
     })
   );
