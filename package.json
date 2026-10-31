@@ -11,14 +11,16 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.27",
     "@ai-sdk/react": "^4.0.51",
+    "@modelcontextprotocol/server": "^2.4.0",
     "@supabase/supabase-js": "^2.105.4",
     "ai": "^7.0.48",
+    "mcp-handler": "^2.3.0",
     "next": "14.2.35",
     "react": "^18",
     "react-dom": "^18",
     "resend": "^6.12.3",
     "stripe": "^22.1.1",
-    "zod": "^3.25.76"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^20",
