@@ -111,8 +111,46 @@ O achado técnico real do ADR anterior (WhatsApp do 168 hoje é modelo conta-par
 relevante — só que agora o "padrão de envio em massa" não é mais o foco central do pivô, é só
 uma peça complementar (push) de uma arquitetura maior (MCP).
 
-## Próximo passo
+## Status de implementação (atualizado 31/10/2026, mesma sessão)
 
-Documentar isso também na memória do Claude Code (`project_168.md`). Implementação ainda não
-começou — próxima decisão é se o Luciano quer iniciar o rebuild agora (scaffold do MCP, schema
-flexível, fluxo de auth) ou tratar hoje como o fechamento da fase de planejamento.
+Rebuild iniciado e primeiro recorte do MCP já no ar em produção (`168.lucianomaeda.com.br/api/mcp`),
+testado ponta a ponta com dado real. Resolve os 3 pontos de dor pessoais que motivaram o escopo
+do MVP (e-mail fragmentado, agenda fora do loop, WhatsApp desconectado).
+
+**Ferramentas MCP registradas:**
+- `salvar_dado_customizado` / `listar_dados_customizados` / `marcar_dado_resolvido` — schema
+  flexível (tabela `campos_customizados`: categoria/nome/valor JSONB), conforme decidido na
+  seção 2. Claude decide o que registrar, nunca altera estrutura de banco.
+- `buscar_emails` — multiconta (`contas_email_conectadas`), OAuth próprio por conta (não é o
+  login do Supabase Auth), `gmail.readonly`, testado com 3 contas reais (AUA, pessoal, marca).
+- `buscar_agenda` — mesmo padrão multiconta, `calendar.readonly`, testado com evento real.
+- `buscar_whatsapp` — ver detalhe abaixo.
+
+**WhatsApp — pontos em aberto da seção 4 resolvidos na prática:**
+- Classificação de urgência: fica a cargo do Claude **no momento da leitura** via MCP (opção
+  "mais flexível"), não como regra fixa na ingestão. A descrição da ferramenta já instrui o
+  Claude a classificar relativo à grade/compromissos do usuário.
+- Retenção de conteúdo bruto: tudo que chega é persistido (não filtra ruído vs. sinal na
+  ingestão) — simplicidade de implementação; pode virar política de retenção/limpeza depois, se o
+  volume de grupos grandes justificar.
+- **Ingestão simplificada em relação ao desenho original**: o webhook da Evolution aponta direto
+  pra uma rota mecânica no próprio Next.js (`/api/whatsapp/ingest`), sem passar por n8n. Mesmo
+  resultado (mecânico, sem IA, sem resposta), menos uma peça de infra pra manter — n8n fica livre
+  pra outros produtos.
+- Reaproveitada a instância Evolution já existente (`teste_seudia`, número pessoal do Luciano, já
+  pareado antes) em vez de criar uma nova — só reconfigurado webhook + desligado
+  `syncFullHistory` (não precisa reimportar as 100k+ mensagens antigas da instância).
+
+**Achado de schema**: `app/api/whatsapp/route.ts` (herdado do MeuDIA, usado pela UI de conectar
+em `/dashboard/conectar`) referencia colunas (`status`, `active`, `paused`) que **não existem**
+na tabela `instances` real (ver `supabase_migration_00_base.sql`) — bug pré-existente, nunca
+exercitado a sério antes. A nova rota de ingestão foi escrita contra o schema real. A UI antiga
+de conectar ainda não foi corrigida (não bloqueou nada porque a conexão foi feita direto via API
+da Evolution) — ver pendências no `project_168.md`.
+
+**Pendente (próximos incrementos, não iniciados):**
+- Camada de billing/OAuth por usuário real (hoje é single-user/dogfood, `OWNER_EMAIL` fixo em
+  `lib/owner.ts`).
+- Corrigir ou aposentar `app/api/whatsapp/route.ts` (UI antiga de conectar com bug de schema).
+- Política de retenção de WhatsApp de grupo grande (se necessário, depois de uso real).
+- Avaliar tabelas ainda não revisadas da auditoria (`execucao_bloco`, `reunioes`, `action_items`).
