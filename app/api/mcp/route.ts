@@ -269,6 +269,14 @@ const handler = createMcpHandler(
           'relativas à grade real dele, não genéricas. Se pacto_aceito vier false ou o perfil vier ' +
           'nulo, o usuário ainda não passou pelo Pacto — conduza a conversa de onboarding (pergunte ' +
           'o que travou, o que mudou, como quer distribuir as 168h) e registre com atualizar_pacto_168. ' +
+          'IMPORTANTE — onboarding essencial: se onboarding_essencial_completo vier false, isso tem ' +
+          'PRIORIDADE MÁXIMA, antes até do briefing filosófico (o que travou/o que mudou) — sem a ' +
+          'rotina fixa (hora de dormir/acordar, modo de trabalho e deslocamento, horário das 3 ' +
+          'refeições), o sistema não consegue planejar uma semana de verdade, só adivinhar. Veja ' +
+          'onboarding_essencial_faltando pra saber exatamente o que perguntar, uma coisa de cada vez, ' +
+          'em conversa — nunca como formulário. Pergunte também sobre atividade física e cursos/' +
+          'atividades semanais recorrentes (dia + duração + deslocamento) e registre cada um como um ' +
+          'bloco fixo via salvar_bloco_fixo, não como campo do perfil. ' +
           'IMPORTANTE — autoverificação de ritual: o 168 nunca inicia conversa sozinho (só lê, nunca ' +
           'envia mensagem), então é no INÍCIO de uma conversa nova que você checa isso. Se ' +
           'ritual_diario_pendente vier true, proponha fazer o planejamento do dia (preparar_planejamento ' +
@@ -295,12 +303,14 @@ const handler = createMcpHandler(
       'atualizar_pacto_168',
       {
         description:
-          'Atualiza o Pacto do usuário (briefing de vida + distribuição das 168h por esfera). Use ' +
-          'de forma incremental, campo a campo, conforme a conversa for revelando — nunca peça tudo ' +
-          'de uma vez como formulário. horas_cuidar_mim + horas_cuidar_familia + horas_trabalho + ' +
-          'horas_sono não precisa somar exatamente 168 (sobra é tempo ainda não decidido), mas ' +
-          'avise o usuário se a soma de Trabalho estiver consumindo quase tudo que sobra do Sono — ' +
-          'isso é o sintoma da "Armadilha das Obrigações" que o método descreve.',
+          'Atualiza o Pacto do usuário (briefing de vida + distribuição das 168h por esfera + ' +
+          'rotina fixa do dia). Use de forma incremental, campo a campo, conforme a conversa for ' +
+          'revelando — nunca peça tudo de uma vez como formulário. horas_cuidar_mim + ' +
+          'horas_cuidar_familia + horas_trabalho + horas_sono não precisa somar exatamente 168 ' +
+          '(sobra é tempo ainda não decidido), mas avise o usuário se a soma de Trabalho estiver ' +
+          'consumindo quase tudo que sobra do Sono — isso é o sintoma da "Armadilha das Obrigações" ' +
+          'que o método descreve. Os campos de rotina fixa (hora_dormir em diante) são o onboarding ' +
+          'essencial — sem eles não dá pra planejar semana de verdade, ver ver_metodo_168.',
         inputSchema: z.object({
           pacto_aceito: z.boolean().optional().describe('true quando o usuário aceitar explicitamente a premissa filosófica do método.'),
           o_que_travou: z.string().optional().describe('Resposta à pergunta "o que travou nos últimos anos apesar do esforço?"'),
@@ -309,6 +319,14 @@ const handler = createMcpHandler(
           horas_cuidar_mim: z.number().optional(),
           horas_cuidar_familia: z.number().optional(),
           horas_trabalho: z.number().optional(),
+          hora_dormir: z.string().optional().describe('HH:MM.'),
+          hora_acordar: z.string().optional().describe('HH:MM.'),
+          modo_trabalho: z.enum(['presencial', 'home_office', 'hibrido']).optional(),
+          dias_trabalho_presencial: z.array(z.number().int().min(0).max(6)).optional().describe('0=domingo...6=sábado. Só relevante se modo_trabalho="hibrido".'),
+          tempo_deslocamento_trabalho_min: z.number().optional().describe('Tempo de ida (não ida+volta) até o trabalho, em minutos.'),
+          horario_cafe: z.string().optional().describe('HH:MM.'),
+          horario_almoco: z.string().optional().describe('HH:MM.'),
+          horario_janta: z.string().optional().describe('HH:MM.'),
         }),
       },
       async (campos) => {

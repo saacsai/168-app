@@ -16,7 +16,21 @@ export type Perfil168 = {
   horas_trabalho: number | null;
   ultimo_ritual_diario: string | null;
   ultimo_ritual_semanal: string | null;
+  hora_dormir: string | null;
+  hora_acordar: string | null;
+  modo_trabalho: 'presencial' | 'home_office' | 'hibrido' | null;
+  dias_trabalho_presencial: number[] | null;
+  tempo_deslocamento_trabalho_min: number | null;
+  horario_cafe: string | null;
+  horario_almoco: string | null;
+  horario_janta: string | null;
 };
+
+const CAMPOS_PERFIL =
+  'pacto_aceito, o_que_travou, o_que_mudou, horas_sono, horas_cuidar_mim, horas_cuidar_familia, ' +
+  'horas_trabalho, ultimo_ritual_diario, ultimo_ritual_semanal, hora_dormir, hora_acordar, ' +
+  'modo_trabalho, dias_trabalho_presencial, tempo_deslocamento_trabalho_min, horario_cafe, ' +
+  'horario_almoco, horario_janta';
 
 function segundaFeiraDe(data: Date): string {
   const d = new Date(data);
@@ -25,23 +39,41 @@ function segundaFeiraDe(data: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export async function verPerfil168(): Promise<(Perfil168 & { ritual_diario_pendente: boolean; ritual_semanal_pendente: boolean }) | null> {
+export async function verPerfil168(): Promise<(Perfil168 & {
+  ritual_diario_pendente: boolean;
+  ritual_semanal_pendente: boolean;
+  onboarding_essencial_completo: boolean;
+  onboarding_essencial_faltando: string[];
+}) | null> {
   const userId = await resolveOwnerUserId();
   const { data, error } = await supabaseAdmin()
     .from('perfil_168')
-    .select('pacto_aceito, o_que_travou, o_que_mudou, horas_sono, horas_cuidar_mim, horas_cuidar_familia, horas_trabalho, ultimo_ritual_diario, ultimo_ritual_semanal')
+    .select(CAMPOS_PERFIL)
     .eq('user_id', userId)
-    .maybeSingle();
+    .maybeSingle<Perfil168>();
   if (error) throw new Error(error.message);
   if (!data) return null;
 
   const hoje = new Date().toISOString().slice(0, 10);
   const segundaAtual = segundaFeiraDe(new Date());
 
+  const essenciais: [string, unknown][] = [
+    ['hora_dormir', data.hora_dormir],
+    ['hora_acordar', data.hora_acordar],
+    ['modo_trabalho', data.modo_trabalho],
+    ['tempo_deslocamento_trabalho_min', data.tempo_deslocamento_trabalho_min],
+    ['horario_cafe', data.horario_cafe],
+    ['horario_almoco', data.horario_almoco],
+    ['horario_janta', data.horario_janta],
+  ];
+  const faltando = essenciais.filter(([, v]) => v === null || v === undefined).map(([k]) => k);
+
   return {
     ...data,
     ritual_diario_pendente: data.ultimo_ritual_diario !== hoje,
     ritual_semanal_pendente: !data.ultimo_ritual_semanal || data.ultimo_ritual_semanal < segundaAtual,
+    onboarding_essencial_completo: faltando.length === 0,
+    onboarding_essencial_faltando: faltando,
   };
 }
 
@@ -63,6 +95,14 @@ export async function atualizarPacto168(campos: Partial<{
   horas_cuidar_mim: number;
   horas_cuidar_familia: number;
   horas_trabalho: number;
+  hora_dormir: string;
+  hora_acordar: string;
+  modo_trabalho: string;
+  dias_trabalho_presencial: number[];
+  tempo_deslocamento_trabalho_min: number;
+  horario_cafe: string;
+  horario_almoco: string;
+  horario_janta: string;
 }>): Promise<void> {
   const userId = await resolveOwnerUserId();
   const patch: Record<string, unknown> = { ...campos, updated_at: new Date().toISOString() };
